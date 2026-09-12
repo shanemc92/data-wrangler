@@ -1,0 +1,2808 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+<title>data-wrangler</title>
+
+<!-- Webfonts are off by default so the file works offline and from file://.
+     To turn them on, uncomment the two lines below and swap the CSP above for:
+     ... style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; ...
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+-->
+
+<style>
+
+/* ============================================================
+   tabular-wrangler
+   One structural stylesheet driven by per-theme design tokens.
+   Two themes, same terminal styling, opposite palettes.
+   ============================================================ */
+
+:root {
+    --wrap: 1180px;  /* the card's column width */
+    --font: 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+}
+
+/* ---------- Tokens: Dark (default) ---------- */
+:root,
+html[data-theme="dark"] {
+    --bg:          #0b0e14;
+    --card:        #161b25;
+    --sunken:      #11161f;
+    --raised:      #1b212d;
+    --line:        #262d3a;
+    --line-soft:   #1e2431;
+    --fg:          #c7ccd6;
+    --fg-dim:      #7b8496;
+    --fg-faint:    #59616f;
+    --accent:      #58a6ff;
+    --accent-soft: rgba(88, 166, 255, 0.14);
+    --accent-ink:  #06111f;
+    --toggle-on:   #3fb950;
+    --toggle-ink:  #06210c;
+    --radius:      10px;
+    --radius-sm:   6px;
+    --shadow:      0 18px 50px -18px rgba(0, 0, 0, 0.75);
+    --bad:         #f87171;
+    --warn:        #d29922;
+    --ok:          #3fb950;
+}
+
+/* ---------- Tokens: Light ---------- */
+html[data-theme="light"] {
+    --bg:          #e9edf2;
+    --card:        #ffffff;
+    --sunken:      #f3f5f8;
+    --raised:      #fbfcfd;
+    --line:        #d3dae3;
+    --line-soft:   #e5eaf0;
+    --fg:          #0e1620;
+    --fg-dim:      #5f6b7a;
+    --fg-faint:    #8b96a5;
+    --accent:      #0f766e;
+    --accent-soft: rgba(15, 118, 110, 0.10);
+    --accent-ink:  #ffffff;
+    --toggle-on:   #0f766e;
+    --toggle-ink:  #ffffff;
+    --radius:      10px;
+    --radius-sm:   6px;
+    --shadow:      0 1px 2px rgba(16, 24, 40, 0.05), 0 14px 36px -16px rgba(16, 24, 40, 0.28);
+    --bad:         #dc2626;
+    --warn:        #b45309;
+    --ok:          #0f766e;
+}
+
+/* ============================================================
+   Base
+   ============================================================ */
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    padding: 28px 20px 48px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font);
+    font-size: 13.5px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: var(--accent); color: var(--accent-ink); }
+::placeholder { color: var(--fg-faint); opacity: 1; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ============================================================
+   Window
+   ============================================================ */
+.container {
+    width: 100%;
+    max-width: var(--wrap);
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+/* ---------- Title bar ---------- */
+.titlebar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 12px 11px 16px;
+    background: var(--sunken);
+    border-bottom: 1px solid var(--line-soft);
+}
+.dot { width: 11px; height: 11px; border-radius: 50%; }
+.dot:nth-child(1) { background: #ff5f56; }
+.dot:nth-child(2) { background: #ffbd2e; }
+.dot:nth-child(3) { background: #27c93f; }
+
+/* Centred on the window rather than after the dots, so it stays centred
+   whatever sits on the right. */
+.titlebar-title {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12.5px;
+    color: var(--fg-dim);
+    pointer-events: none;
+    white-space: nowrap;
+}
+.titlebar .spacer { flex: 1; }
+
+/* ---------- Theme toggle ---------- */
+.icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 27px;
+    height: 27px;
+    padding: 0;
+    color: var(--fg-dim);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+}
+.icon-btn:hover { color: var(--accent); border-color: var(--line); }
+.icon-btn svg {
+    width: 15px; height: 15px;
+    fill: none; stroke: currentColor;
+    stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round;
+}
+/* Show the icon for the theme you would switch to. */
+html[data-theme="dark"]  .ic-moon { display: none; }
+html[data-theme="light"] .ic-sun  { display: none; }
+
+/* ---------- Tab strip ---------- */
+.tabs {
+    display: flex;
+    padding: 0 8px;
+    background: var(--sunken);
+    border-bottom: 1px solid var(--line);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+    font: inherit;
+    font-size: 12.5px;
+    color: var(--fg-dim);
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    padding: 9px 15px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+.tab:hover { color: var(--fg); }
+.tab[aria-selected="true"] {
+    color: var(--accent);
+    background: var(--card);
+    border-bottom-color: var(--accent);
+}
+
+.body { padding: 20px 22px 24px; }
+section[hidden] { display: none; }
+
+/* ---------- Prompt line ---------- */
+.prompt { margin-bottom: 6px; font-size: 13px; }
+.prompt .path { color: var(--accent); }
+.prompt .chev { color: var(--fg-faint); }
+.comment { color: var(--fg-faint); font-size: 12.5px; margin-bottom: 20px; }
+
+/* ============================================================
+   Sections
+   ============================================================ */
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.section-header span {
+    font-size: 11px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+}
+.section-header span::before { content: '// '; color: var(--fg-faint); }
+
+.panel {
+    background: var(--sunken);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+/* ============================================================
+   Controls
+   ============================================================ */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 13px;
+    font: inherit;
+    font-size: 12.5px;
+    color: var(--fg);
+    background: var(--raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.btn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.btn:active { transform: scale(0.985); }
+.btn:disabled { opacity: 0.55; cursor: default; }
+.btn:disabled:hover { color: var(--fg); border-color: var(--line); background: var(--raised); }
+
+.btn-primary { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+.btn-primary:hover { color: var(--accent-ink); background: var(--accent); filter: brightness(1.12); }
+.btn-danger:hover { color: var(--bad); border-color: var(--bad); background: transparent; }
+.btn-sm { padding: 5px 9px; font-size: 12px; }
+
+/* ---------- Inputs ---------- */
+.field {
+    width: 100%;
+    font: inherit;
+    font-size: 12.5px;
+    color: var(--fg);
+    background: var(--raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 7px 10px;
+    outline: none;
+    transition: border-color 0.15s;
+}
+.field:hover { border-color: var(--fg-faint); }
+.field:focus { border-color: var(--accent); }
+textarea.field { line-height: 1.6; resize: vertical; }
+select.field { cursor: pointer; }
+
+.f {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 11px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+}
+
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.spacer { flex: 1; }
+
+/* ---------- Toggle rows ---------- */
+.toggle-group { display: flex; flex-direction: column; gap: 12px; }
+.toggle-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 30px;
+}
+.toggle-label { font-size: 12.5px; color: var(--fg); }
+
+.toggle-switch {
+    position: relative;
+    flex: 0 0 auto;
+    width: 40px;
+    height: 22px;
+    border-radius: 11px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    cursor: pointer;
+    transition: background 0.18s, border-color 0.18s;
+}
+.toggle-switch::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--fg-faint);
+    transition: transform 0.18s, background 0.18s;
+}
+.toggle-switch.active { background: var(--toggle-on); border-color: var(--toggle-on); }
+.toggle-switch.active::after { transform: translateX(18px); background: var(--toggle-ink); }
+
+/* ---------- Drop zone ---------- */
+.drop {
+    border: 1px dashed var(--line);
+    border-radius: var(--radius-sm);
+    padding: 22px 14px;
+    text-align: center;
+    color: var(--fg-dim);
+    background: var(--raised);
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.drop:hover, .drop.over { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.drop b { display: block; margin-bottom: 2px; color: var(--fg); font-weight: 500; }
+.drop:hover b { color: var(--accent); }
+
+/* ---------- Text ---------- */
+pre {
+    margin: 0;
+    padding: 12px;
+    max-height: 340px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 12.5px;
+    line-height: 1.6;
+    background: var(--raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+}
+code { font-size: 12px; }
+mark { background: var(--accent-soft); color: var(--accent); border-radius: 3px; padding: 1px 3px; }
+.log { font-size: 12px; color: var(--fg-dim); }
+.log .ok { color: var(--ok); } .log .warn { color: var(--warn); }
+.log .bad { color: var(--bad); } .log .a { color: var(--accent); }
+.note { font-size: 11.5px; line-height: 1.65; color: var(--fg-dim); }
+.note code { color: var(--accent); }
+
+/* ---------- Table ---------- */
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+th {
+    text-align: left;
+    padding: 8px;
+    font-size: 10px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--fg-dim);
+    border-bottom: 1px solid var(--line);
+}
+td { padding: 6px 8px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+td .field { padding: 5px 8px; }
+.empty {
+    padding: 26px;
+    text-align: center;
+    color: var(--fg-dim);
+    border: 1px dashed var(--line);
+    border-radius: var(--radius-sm);
+}
+
+/* ============================================================
+   Notification
+   ============================================================ */
+.notification {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translate(-50%, 20px);
+    z-index: 300;
+    padding: 10px 18px;
+    font-size: 12.5px;
+    color: var(--accent-ink);
+    background: var(--accent);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s, transform 0.22s;
+}
+.notification.show { opacity: 1; transform: translate(-50%, 0); }
+.notification.error { color: #fff; background: var(--bad); }
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+@media (max-width: 640px) {
+    body { padding: 14px 10px 32px; }
+    .body { padding: 16px; }
+    .titlebar-title { display: none; }
+    .grid { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+    }
+}
+
+/* ============================================================
+   Print: one light palette for both themes
+   ============================================================ */
+@media print {
+    :root, html[data-theme="dark"], html[data-theme="light"] {
+        color-scheme: light;
+        --bg: #ffffff; --card: #ffffff; --sunken: #fafafa; --raised: #ffffff;
+        --line: #999999; --line-soft: #cccccc;
+        --fg: #111111; --fg-dim: #555555; --fg-faint: #777777;
+        --accent: #0b4f8a; --accent-soft: transparent; --accent-ink: #ffffff;
+        --shadow: none;
+    }
+    body { padding: 0; display: block; }
+    .container { max-width: none; border: none; box-shadow: none; }
+    .titlebar, .tabs, .drop, .notification, .btn, .noprint { display: none !important; }
+    .body { padding: 0; }
+    section[hidden] { display: block !important; }
+    .panel { break-inside: avoid; page-break-inside: avoid; }
+    a[href]::after { content: " (" attr(href) ")"; font-size: 10px; color: #555; }
+}
+
+/* ============================================================
+   data-wrangler
+   ============================================================ */
+[hidden] { display: none !important; }
+input[type="checkbox"] { accent-color: var(--accent); margin: 0; cursor: pointer; }
+.muted { color: var(--fg-faint); }
+.togs { gap: 8px 22px; margin-top: 14px; }
+.togs .toggle-item { gap: 10px; }
+.mt { margin-top: 12px; }
+
+.textarea-src { min-height: 190px; font-size: 12px; white-space: pre; overflow-wrap: normal; overflow-x: auto; }
+
+/* sources */
+.srcs { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.src {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 2px 2px 4px;
+    background: var(--raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+}
+.src.active { border-color: var(--accent); }
+.src .nm { font: inherit; font-size: 12.5px; color: var(--fg); background: transparent; border: 0; padding: 3px 4px; cursor: pointer; }
+.src.active .nm { color: var(--accent); }
+.src .ct { font-size: 11px; color: var(--fg-faint); padding-right: 4px; }
+
+/* data tables */
+.tbl-wrap {
+    overflow: auto;
+    max-height: 440px;
+    background: var(--raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+}
+.grid-tbl { width: auto; min-width: 100%; }
+.grid-tbl th {
+    position: sticky; top: 0; z-index: 1;
+    background: var(--raised);
+    color: var(--accent);
+    font-size: 11.5px;
+    letter-spacing: 0;
+    text-transform: none;
+    white-space: nowrap;
+}
+.grid-tbl td { padding: 4px 8px; font-size: 12px; white-space: nowrap; max-width: 340px; overflow: hidden; text-overflow: ellipsis; }
+.grid-tbl .rn { color: var(--fg-faint); text-align: right; }
+.grid-tbl tr:hover td { background: var(--accent-soft); }
+
+/* chips */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; text-transform: none; letter-spacing: 0; }
+.chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 8px;
+    font-size: 12px;
+    color: var(--fg);
+    background: var(--raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+.chip.missing { color: var(--warn); border-color: var(--warn); }
+
+/* steps */
+.step {
+    padding: 10px 12px 12px;
+    margin-bottom: 10px;
+    background: var(--raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+}
+.step.off .step-body { opacity: 0.45; }
+.step.min .step-body { display: none; }
+.step.min .step-head { margin-bottom: 0; }
+.step.min .step-msg { margin-top: 6px; }
+.step-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.step-num { color: var(--fg-faint); font-size: 12px; }
+.step-title { color: var(--fg); font-size: 12.5px; }
+.step-body .grid { margin-bottom: 4px; }
+.step-msg { margin-top: 8px; }
+.step-note { margin-top: 8px; }
+.collist { display: flex; flex-direction: column; gap: 4px; max-height: 340px; overflow: auto; margin-bottom: 10px; }
+.colrow { display: grid; grid-template-columns: 18px minmax(80px, 1fr) minmax(80px, 1fr) auto auto; gap: 8px; align-items: center; }
+.colrow.off .colsrc, .colrow.off .field { opacity: 0.45; }
+.colsrc { font-size: 12px; color: var(--fg-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sortkey { display: grid; grid-template-columns: minmax(140px, 2fr) 1fr 1fr auto; gap: 8px; align-items: end; margin-bottom: 8px; }
+.cfgbar .field { width: auto; min-width: 160px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+    <div class="titlebar">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="titlebar-title">data-wrangler</div>
+        <div class="spacer"></div>
+        <button class="icon-btn" id="themeBtn" type="button" aria-pressed="false" title="Switch theme">
+            <svg class="ic-sun" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="4.2"></circle>
+                <path d="M12 2.5v2.2M12 19.3v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"></path>
+            </svg>
+            <svg class="ic-moon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M20 14.2A8.2 8.2 0 0 1 9.8 4a8.2 8.2 0 1 0 10.2 10.2z"></path>
+            </svg>
+        </button>
+    </div>
+
+    <div class="tabs" role="tablist">
+        <button class="tab" id="tab-input" role="tab" aria-selected="true" aria-controls="pane-input">input</button>
+        <button class="tab" id="tab-transform" role="tab" aria-selected="false" aria-controls="pane-transform">transform</button>
+        <button class="tab" id="tab-output" role="tab" aria-selected="false" aria-controls="pane-output">output</button>
+        <button class="tab" id="tab-about" role="tab" aria-selected="false" aria-controls="pane-about">about</button>
+    </div>
+
+    <div class="body">
+
+        <div class="prompt"><span class="path">~/data-wrangler</span> <span class="chev">&gt;</span> <span id="status">ready</span></div>
+        <div class="comment"># parse, reshape and convert CSV, TSV, JSON, Markdown and key=value logs. runs in your browser, nothing is uploaded</div>
+
+        <div class="panel noprint">
+            <div class="row cfgbar">
+                <select class="field" id="presetSel" title="Configs saved in this browser"></select>
+                <button class="btn" id="btnPresetLoad">Load</button>
+                <button class="btn btn-danger" id="btnPresetDel">Delete</button>
+                <input type="text" class="field" id="presetName" placeholder="config name" spellcheck="false">
+                <button class="btn" id="btnPresetSave">Save</button>
+                <div class="spacer"></div>
+                <button class="btn" id="btnCfgLoad">Load config file</button>
+                <button class="btn btn-primary" id="btnCfgSave">Save config file</button>
+                <button class="btn btn-danger" id="btnReset">Reset</button>
+            </div>
+            <input type="file" id="cfgFile" accept=".json,application/json" hidden>
+            <div class="note" style="margin-top:10px">A config is the parse settings, steps and output settings, without the data. Load one, then drop this week's files in. Ctrl+S saves a config file, Ctrl+O loads one.</div>
+        </div>
+
+        <!-- ======================= input ======================= -->
+        <section id="pane-input" role="tabpanel" aria-labelledby="tab-input">
+
+            <div class="panel">
+                <div class="section-header">
+                    <span>Sources</span>
+                    <div class="row noprint"><button class="btn btn-sm" id="btnNewPaste">New paste</button></div>
+                </div>
+                <div class="drop noprint" id="drop" tabindex="0" role="button">
+                    <b>Drop files here</b>
+                    or click to browse. Several files can be appended or joined.
+                </div>
+                <input type="file" id="fileMulti" multiple hidden>
+                <div class="srcs" id="srcList"></div>
+                <div class="grid" style="margin-bottom:10px">
+                    <label class="f">Name<input type="text" class="field" id="srcName" spellcheck="false"></label>
+                </div>
+                <textarea class="field textarea-src" id="srcText" spellcheck="false" placeholder="Paste CSV, TSV, JSON, a Markdown table or log lines here"></textarea>
+                <div class="log" id="srcNote"></div>
+            </div>
+
+            <div class="panel">
+                <div class="section-header"><span>Parse</span><span class="muted" id="parseName" style="text-transform:none"></span></div>
+                <div class="empty" id="parseEmpty">Add a file or paste some text first.</div>
+                <div id="parseBody">
+                    <div class="grid">
+                        <label class="f">Format<select class="field" id="pFormat"></select></label>
+                        <label class="f pf-delim">Delimiter<select class="field" id="pDelim"></select></label>
+                        <label class="f pf-delim" id="pDelimCustomWrap">Custom delimiter<input type="text" class="field" id="pDelimCustom" placeholder="e.g. :: or \t" spellcheck="false"></label>
+                        <label class="f pf-delim">Quote character<select class="field" id="pQuote"></select></label>
+                        <label class="f pf-delim">Max columns (0 = all)<input type="number" class="field" id="pMaxCols" min="0"></label>
+                        <label class="f pf-fixed">Column spec is<select class="field" id="pFixedMode"></select></label>
+                        <label class="f pf-fixed">Cut positions or widths<input type="text" class="field" id="pFixedSpec" placeholder="e.g. 6,19,25,31,33" spellcheck="false"></label>
+                        <label class="f pf-kv">Key/value separator<input type="text" class="field" id="pKvSep" spellcheck="false"></label>
+                        <label class="f pf-kv">Pair separator<select class="field" id="pKvPair"></select></label>
+                        <label class="f pf-json">JSON path (optional)<input type="text" class="field" id="pJsonPath" placeholder="e.g. data.items" spellcheck="false"></label>
+                        <label class="f pf-text">Skip first lines<input type="number" class="field" id="pSkip" min="0"></label>
+                        <label class="f pf-text">Ignore lines starting with<input type="text" class="field" id="pComment" placeholder="e.g. #" spellcheck="false"></label>
+                    </div>
+                    <div class="row togs">
+                        <div class="toggle-item pf-header"><span class="toggle-label">First row is header</span><div class="toggle-switch" id="tHeader" role="switch" aria-checked="false" tabindex="0"></div></div>
+                        <div class="toggle-item pf-delim"><span class="toggle-label">Split on any one of these characters</span><div class="toggle-switch" id="tAnyChar" role="switch" aria-checked="false" tabindex="0"></div></div>
+                        <div class="toggle-item pf-delim"><span class="toggle-label">Collapse repeated delimiters</span><div class="toggle-switch" id="tCollapse" role="switch" aria-checked="false" tabindex="0"></div></div>
+                        <div class="toggle-item pf-text"><span class="toggle-label">Skip blank rows</span><div class="toggle-switch" id="tSkipBlank" role="switch" aria-checked="false" tabindex="0"></div></div>
+                        <div class="toggle-item pf-text"><span class="toggle-label">Trim cells</span><div class="toggle-switch" id="tTrim" role="switch" aria-checked="false" tabindex="0"></div></div>
+                        <div class="toggle-item pf-json"><span class="toggle-label">Flatten nested objects</span><div class="toggle-switch" id="tFlatten" role="switch" aria-checked="false" tabindex="0"></div></div>
+                    </div>
+                    <div class="row mt">
+                        <span class="note">Detect using lines</span>
+                        <input type="number" class="field" id="pDetFrom" min="1" style="width:90px">
+                        <span class="note">to</span>
+                        <input type="number" class="field" id="pDetTo" min="1" style="width:90px">
+                        <button class="btn btn-sm" id="btnDetect">Detect</button>
+                    </div>
+                    <div class="log mt" id="detLog"></div>
+                    <div class="note mt pf-delim">Max columns keeps the rest of the line, delimiters and all, in the last column. Useful for logs with fixed leading fields and a free text message.</div>
+                    <div class="note mt pf-fixed">Cut positions are 0-based character offsets where a new column starts, so <code>6,19</code> gives 0-5, 6-18 and 19 to the end of the line. Widths are counted from the left instead, and whatever is left over becomes a final column. Detect fills these in from the line range above. Fixed width cells are always trimmed.</div>
+                </div>
+            </div>
+
+            <div class="panel" id="combinePanel" hidden>
+                <div class="section-header"><span>Combine sources</span></div>
+                <div class="grid">
+                    <label class="f">Mode<select class="field" id="cMode"></select></label>
+                    <label class="f cj">Join type<select class="field" id="cType"></select></label>
+                </div>
+                <div class="f cj mt">Key columns (must exist in every source)<div class="chips" id="cKeys"></div></div>
+                <div class="row togs ca">
+                    <div class="toggle-item"><span class="toggle-label">Add _source column</span><div class="toggle-switch" id="tAddSource" role="switch" aria-checked="false" tabindex="0"></div></div>
+                </div>
+                <div class="log mt" id="combineInfo"></div>
+            </div>
+
+            <div class="panel">
+                <div class="section-header"><span>Parsed</span></div>
+                <div class="log" id="parseStat" style="margin-bottom:10px"></div>
+                <div id="parsePrev"></div>
+            </div>
+
+        </section>
+
+        <!-- ======================= transform ======================= -->
+        <section id="pane-transform" role="tabpanel" aria-labelledby="tab-transform" hidden>
+
+            <div class="panel">
+                <div class="section-header">
+                    <span>Steps</span>
+                    <div class="row noprint">
+                        <button class="btn btn-sm" id="btnFoldAll">Collapse all</button>
+                        <select class="field" id="stepAdd" style="width:auto"></select>
+                        <button class="btn btn-sm" id="btnAddStep">Add step</button>
+                    </div>
+                </div>
+                <div id="steps"></div>
+            </div>
+
+            <div class="panel">
+                <div class="section-header"><span>Result</span></div>
+                <div class="log" id="resStat" style="margin-bottom:10px"></div>
+                <div id="resPrev"></div>
+            </div>
+
+        </section>
+
+        <!-- ======================= output ======================= -->
+        <section id="pane-output" role="tabpanel" aria-labelledby="tab-output" hidden>
+
+            <div class="panel">
+                <div class="section-header"><span>Format</span></div>
+                <div class="grid">
+                    <label class="f">Format<select class="field" id="oFormat"></select></label>
+                    <label class="f of-json">JSON shape<select class="field" id="oShape"></select></label>
+                    <label class="f">Line endings<select class="field" id="oEol"></select></label>
+                    <label class="f">File name<input type="text" class="field" id="oName" placeholder="defaults to the first source name" spellcheck="false"></label>
+                </div>
+                <div class="row togs">
+                    <div class="toggle-item of-hdr"><span class="toggle-label">Header row</span><div class="toggle-switch" id="tHeaderOut" role="switch" aria-checked="false" tabindex="0"></div></div>
+                    <div class="toggle-item of-json"><span class="toggle-label">Pretty print</span><div class="toggle-switch" id="tPretty" role="switch" aria-checked="false" tabindex="0"></div></div>
+                    <div class="toggle-item of-json"><span class="toggle-label">Numbers and true/false as JSON types</span><div class="toggle-switch" id="tTyped" role="switch" aria-checked="false" tabindex="0"></div></div>
+                    <div class="toggle-item of-dsv"><span class="toggle-label">Formula guard</span><div class="toggle-switch" id="tGuard" role="switch" aria-checked="false" tabindex="0"></div></div>
+                    <div class="toggle-item"><span class="toggle-label">UTF-8 BOM (Excel)</span><div class="toggle-switch" id="tBom" role="switch" aria-checked="false" tabindex="0"></div></div>
+                </div>
+                <div class="note mt of-dsv">Formula guard prefixes a ' to cells starting with = + - @ (numbers excepted) so a spreadsheet will not run them. Leave it off if the file is going to a script.</div>
+            </div>
+
+            <div class="panel">
+                <div class="section-header"><span>Split into files</span></div>
+                <div class="grid">
+                    <label class="f">Split<select class="field" id="oSplit"></select></label>
+                    <label class="f os-n"><span id="oSplitNLabel">Rows per file</span><input type="number" class="field" id="oSplitN" min="1"></label>
+                    <label class="f os-col">Column<select class="field" id="oSplitCol"></select></label>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="section-header">
+                    <span>Preview</span>
+                    <div class="row noprint">
+                        <button class="btn btn-sm" id="btnCopy">Copy</button>
+                        <button class="btn btn-sm btn-primary" id="btnDownload">Download</button>
+                    </div>
+                </div>
+                <div class="log" id="outInfo" style="margin-bottom:10px"></div>
+                <pre id="outPrev"></pre>
+            </div>
+
+        </section>
+
+        <!-- ======================= about ======================= -->
+        <section id="pane-about" role="tabpanel" aria-labelledby="tab-about" hidden>
+            <div class="panel">
+                <div class="section-header"><span>About</span></div>
+                <div class="note">
+                    Takes CSV, TSV, any delimiter or set of delimiters, fixed width columns, JSON or JSON lines, Markdown tables and key=value log lines, runs them through a list of steps, and writes CSV, TSV, JSON, JSON lines or Markdown.<br><br>
+                    <b>input</b> add one or more sources. Each source has its own parse settings. Auto detect looks at the line range you give it, so a file with a preamble or a mixed header can be pointed at the lines that matter. It also recognises fixed width columns, and log lines whose leading fields have the same shape on every line, where the rest of the line is one message. Both can be set by hand: cut positions or widths for fixed width, a max column count for the message case. Two or more sources can be appended (columns lined up by name) or joined on key columns.<br><br>
+                    <b>transform</b> steps run top to bottom and can be switched off, moved, collapsed to just their header and result line, or removed. A step that fails is skipped and shows why. For firewall exports where every field carries its own name (timestamp=2026-05-20 20:05,src=10.0.0.1) either parse as key=value, or use the "key=value cells to columns" step on an already split table. Both line fields up by key, so missing or reordered fields do not shift columns.<br><br>
+                    <b>output</b> pick a format, optionally split into files by row count, percentage or column value, and download. Split files each carry the header.<br><br>
+                    Everything runs client side. There is no network call, no analytics and no dependency. Data and settings are autosaved to this browser's local storage until you press Reset; very large inputs are not autosaved. Regex steps run your own patterns on the main thread, so a catastrophic pattern can hang the tab.
+                </div>
+            </div>
+        </section>
+
+        <div class="note">data-wrangler v1.1.0 &middot; MIT &middot; <code>github.com/shanemc92</code></div>
+    </div>
+</div>
+
+<div class="notification" id="notification" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+
+/* ---------- app identity ---------- */
+const APP = { id: "data-wrangler", version: "1.1.0", schema: 1 };
+const PREVIEW_ROWS = 200, PREVIEW_COLS = 80, BIG_TEXT = 1000000, MAX_PARTS = 500, MAX_NEW_COLS = 200;
+
+/* ---------- dom helpers ---------- */
+const $  = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const el = (tag, cls, txt) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (txt != null) n.textContent = txt;
+    return n;
+};
+
+/* ---------- storage (file:// and private mode safe) ---------- */
+const store = {
+    get(k)   { try { return localStorage.getItem(APP.id + ":" + k); } catch (e) { return null; } },
+    set(k,v) { try { localStorage.setItem(APP.id + ":" + k, v); return true; } catch (e) { return false; } },
+    del(k)   { try { localStorage.removeItem(APP.id + ":" + k); } catch (e) {} }
+};
+
+/* ---------- notification ---------- */
+let notifyT;
+function notify(msg, isError) {
+    const n = $("#notification");
+    n.textContent = msg;
+    n.classList.toggle("error", !!isError);
+    n.classList.add("show");
+    clearTimeout(notifyT);
+    notifyT = setTimeout(() => n.classList.remove("show"), 2600);
+}
+
+/* ---------- theme ---------- */
+const themeBtn = $("#themeBtn");
+function applyTheme(theme) {
+    const t = theme === "light" ? "light" : "dark";
+    document.documentElement.dataset.theme = t;
+    themeBtn.setAttribute("aria-pressed", String(t === "light"));
+    themeBtn.title = t === "dark" ? "Switch to light" : "Switch to dark";
+}
+themeBtn.addEventListener("click", () => {
+    const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    applyTheme(next);
+    if (!store.set("theme", next))
+        notify("Theme changed for this session only, saving it needs the page served over http");
+});
+applyTheme(store.get("theme") || "dark");
+
+/* ---------- tabs ---------- */
+const TABS = [["input", "pane-input"], ["transform", "pane-transform"], ["output", "pane-output"], ["about", "pane-about"]];
+function tab(which) {
+    TABS.forEach(([id, pane]) => {
+        $("#tab-" + id).setAttribute("aria-selected", String(id === which));
+        $("#" + pane).hidden = id !== which;
+    });
+}
+TABS.forEach(([id]) => $("#tab-" + id).addEventListener("click", () => tab(id)));
+
+/* ---------- toggles ---------- */
+function setToggle(node, on) {
+    node.classList.toggle("active", !!on);
+    node.setAttribute("aria-checked", String(!!on));
+}
+function toggle(node, onChange) {
+    const flip = () => {
+        const on = !node.classList.contains("active");
+        setToggle(node, on);
+        onChange(on);
+    };
+    node.addEventListener("click", flip);
+    node.addEventListener("keydown", e => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(); }
+    });
+}
+
+/* ---------- files ---------- */
+function download(name, text, type) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([text], { type: type || "text/plain;charset=utf-8" }));
+    a.download = name;
+    a.click();
+    setTimeout(() => { try { URL.revokeObjectURL(a.href); } catch (e) {} }, 15000);
+}
+const readText = f => new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(String(r.result));
+    r.onerror = () => rej(r.error);
+    r.readAsText(f);
+});
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const fmtSize = n => n > 1048576 ? (n / 1048576).toFixed(1) + " MB" : (n / 1024).toFixed(1) + " KB";
+
+/* ---------- small utils ---------- */
+const hasOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+const uid = () => Math.random().toString(36).slice(2, 10);
+const escRe = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const unesc = s => String(s).replace(/\\t/g, "\t").replace(/\\n/g, "\n");
+const slug = s => String(s || "").replace(/[^a-z0-9._-]+/gi, "-").replace(/^[-.]+|-+$/g, "").slice(0, 60);
+const KEY = "[A-Za-z_][\\w.\\-]*";
+const NUM_RE = /^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/;
+const num = v => { const s = String(v).trim(); return NUM_RE.test(s) ? Number(s) : NaN; };
+function ipNum(v) {
+    const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(String(v).trim());
+    if (!m) return null;
+    let n = 0;
+    for (let i = 1; i < 5; i++) { const o = +m[i]; if (o > 255) return null; n = n * 256 + o; }
+    return n;
+}
+const coll = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
+const collText = new Intl.Collator(undefined, { sensitivity: "variant" });
+function cmpAuto(a, b) {
+    const x = num(a), y = num(b);
+    if (!isNaN(x) && !isNaN(y)) return x - y;
+    const p = ipNum(a), q = ipNum(b);
+    if (p !== null && q !== null) return p - q;
+    return coll.compare(a, b);
+}
+function mkRe(p, f) {
+    try { return new RegExp(p, f); } catch (e) { throw new Error("bad regex: " + e.message); }
+}
+function unq(v) {
+    const m = /^\s*(["'])([\s\S]*)\1\s*$/.exec(v);
+    return m ? m[2].split("\\" + m[1]).join(m[1]) : v;
+}
+function uniq(names) {
+    const seen = new Set();
+    return names.map((n, i) => {
+        const b = String(n == null ? "" : n).trim() || ("col_" + (i + 1));
+        let x = b, k = 2;
+        while (seen.has(x)) x = b + "_" + (k++);
+        seen.add(x);
+        return x;
+    });
+}
+function cellStr(v) {
+    if (v == null) return "";
+    if (typeof v === "object") return JSON.stringify(v);
+    return String(v);
+}
+
+/* ============================================================
+   Parsers. Every parser returns { cols: [names], rows: [[strings]] }
+   ============================================================ */
+
+/* Delimited text. Quote aware. delim is "ws" for runs of spaces and tabs, a
+   single character, a multi-character string, or, with opts.anyChar, a set of
+   characters any one of which splits. opts.collapse treats runs of delimiters
+   as one. opts.max caps the column count: the last column keeps the rest of
+   the line, delimiters and all. */
+function parseDSV(text, delim, quote, opts) {
+    opts = opts || {};
+    const ws = delim === "ws";
+    const max = Math.max(0, Math.floor(opts.max) || 0);
+    const collapse = ws || !!opts.collapse;
+    let one = null, multi = [];
+    if (!ws) {
+        const d = String(delim == null ? "" : delim);
+        if (!d) return text.split(/\r\n|\n|\r/).map(l => [l]);
+        if (opts.anyChar) one = new Set(Array.from(d));
+        else if (d.length === 1) one = new Set([d]);
+        else multi = [d];
+    }
+    const rows = [], n = text.length;
+    const isWs = c => c === " " || c === "\t";
+    const delimAt = i => {
+        if (ws) return isWs(text[i]) ? 1 : 0;
+        if (one) return one.has(text[i]) ? 1 : 0;
+        for (const d of multi) if (text.startsWith(d, i)) return d.length;
+        return 0;
+    };
+    let i = 0, row = [];
+    const eol = () => {
+        i += (text[i] === "\r" && text[i + 1] === "\n") ? 2 : 1;
+        rows.push(row); row = [];
+    };
+    const skipDelims = () => { let k; while (i < n && (k = delimAt(i))) i += k; };
+    while (i < n) {
+        if (collapse && row.length === 0) { skipDelims(); if (i >= n) break; }
+        if (max && row.length === max - 1) {
+            const s = i;
+            while (i < n && text[i] !== "\n" && text[i] !== "\r") i++;
+            row.push(text.slice(s, i));
+            if (i >= n) break;
+            eol();
+            continue;
+        }
+        let f;
+        if (quote && text[i] === quote) {
+            i++; f = "";
+            let s = i;
+            for (;;) {
+                const j = text.indexOf(quote, i);
+                if (j < 0) { f += text.slice(s); i = n; break; }
+                if (text[j + 1] === quote) { f += text.slice(s, j + 1); i = s = j + 2; continue; }
+                f += text.slice(s, j); i = j + 1; break;
+            }
+            const s2 = i;
+            while (i < n && text[i] !== "\n" && text[i] !== "\r" && !delimAt(i)) i++;
+            f += text.slice(s2, i);
+        } else {
+            const s = i;
+            while (i < n && text[i] !== "\n" && text[i] !== "\r" && !delimAt(i)) i++;
+            f = text.slice(s, i);
+        }
+        row.push(f);
+        if (i >= n) break;
+        if (text[i] === "\n" || text[i] === "\r") { eol(); continue; }
+        i += delimAt(i);
+        if (collapse) {
+            skipDelims();
+            if (i >= n) break;
+            if (text[i] === "\n" || text[i] === "\r") eol();
+        } else if (i >= n) { row.push(""); break; }
+    }
+    if (row.length) rows.push(row);
+    return rows;
+}
+
+/* Fixed width. cuts are 0-based character positions where a new column starts,
+   so 6,19 gives columns 0-5, 6-18 and 19 to the end of the line. */
+function cutsFromSpec(spec, mode) {
+    const nums = String(spec || "").split(/[^0-9]+/).filter(x => x !== "").map(Number).filter(x => x > 0 && x < 100000);
+    let cuts = [];
+    if (mode === "widths") { let at = 0; for (const w of nums) { at += w; cuts.push(at); } }
+    else cuts = nums;
+    return Array.from(new Set(cuts)).sort((a, b) => a - b).slice(0, 200);
+}
+function parseFixed(text, cuts) {
+    const lines = text.split(/\r\n|\n|\r/);
+    if (!cuts.length) return lines.map(l => [l]);
+    return lines.map(l => {
+        const out = [];
+        let at = 0;
+        for (const c of cuts) { out.push(l.slice(at, c)); at = c; }
+        out.push(l.slice(at));
+        return out;
+    });
+}
+
+/* Markdown pipe tables. Separator rows are dropped, \| is a literal pipe. */
+function parseMD(text) {
+    const out = [], sep = /^\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?$/;
+    for (const raw of text.split(/\r\n|\n|\r/)) {
+        const l = raw.trim();
+        if (!l || !l.includes("|") || sep.test(l)) continue;
+        let s = l;
+        if (s.startsWith("|")) s = s.slice(1);
+        if (s.endsWith("|") && !s.endsWith("\\|")) s = s.slice(0, -1);
+        out.push(s.split(/(?<!\\)\|/).map(c => c.trim().replace(/\\\|/g, "|")));
+    }
+    return out;
+}
+
+/* key=value lines. An unquoted value runs until the next key=, so
+   timestamp=2026-05-20 20:05 src=1.2.3.4 keeps the space in the timestamp. */
+function kvPairPattern(p) {
+    if (p === "auto") return "[\\s,;|]+";
+    if (p === " ") return "\\s+";
+    return "\\s*" + escRe(unesc(p)) + "\\s*";
+}
+function parseKV(text, kvSep, pair) {
+    const sep = kvSep || "=";
+    const tail = "(" + KEY + ")[ \\t]*" + escRe(sep);
+    const re = new RegExp("(^|" + kvPairPattern(pair) + ")" + tail, "g");
+    /* the first key may be glued to a prefix, e.g. syslog "<189>date=..." */
+    const first = new RegExp("(^|[^\\w.\\-])" + tail);
+    const idx = new Map(), cols = [], recs = [];
+    for (const line of text.split(/\r\n|\n|\r/)) {
+        if (!line.trim()) continue;
+        const rec = new Map();
+        const put = (k, v) => {
+            let kk = k, c = 2;
+            while (rec.has(kk)) kk = k + "_" + (c++);
+            rec.set(kk, v);
+            if (!idx.has(kk)) { idx.set(kk, cols.length); cols.push(kk); }
+        };
+        let m = first.exec(line);
+        if (!m) { put("_raw", line); recs.push(rec); continue; }
+        const pre = line.slice(0, m.index + m[1].length).trim();
+        if (pre) put("_prefix", pre);
+        while (m) {
+            const key = m[2], vs = m.index + m[0].length;
+            let q = vs;
+            while (line[q] === " ") q++;
+            const qc = line[q];
+            let val, next;
+            if (qc === '"' || qc === "'") {
+                let j = q + 1, out = "";
+                while (j < line.length && line[j] !== qc) {
+                    if (line[j] === "\\" && (line[j + 1] === qc || line[j + 1] === "\\")) { out += line[j + 1]; j += 2; }
+                    else out += line[j++];
+                }
+                val = out;
+                re.lastIndex = Math.min(j + 1, line.length);
+                next = re.exec(line);
+            } else {
+                re.lastIndex = vs;
+                next = re.exec(line);
+                val = line.slice(vs, next ? next.index : line.length).trim();
+            }
+            put(key, val);
+            m = next;
+        }
+        recs.push(rec);
+    }
+    return {
+        cols,
+        rows: recs.map(rec => {
+            const r = new Array(cols.length).fill("");
+            for (const [k, v] of rec) r[idx.get(k)] = v;
+            return r;
+        })
+    };
+}
+
+/* JSON, or JSON lines when the whole text is not one document. */
+function flat(o, pre, rec, deep) {
+    for (const k of Object.keys(o)) {
+        const v = o[k], key = pre ? pre + "." + k : k;
+        if (deep && v && typeof v === "object" && !Array.isArray(v) && Object.keys(v).length) flat(v, key, rec, deep);
+        else rec.set(key, cellStr(v));
+    }
+}
+function jsonTable(text, path, flatten, header) {
+    const t = text.trim();
+    let data;
+    try { data = JSON.parse(t); }
+    catch (e) {
+        data = [];
+        const lines = t.split(/\r\n|\n|\r/);
+        for (let i = 0; i < lines.length; i++) {
+            const l = lines[i].trim();
+            if (!l) continue;
+            try { data.push(JSON.parse(l)); }
+            catch (e2) { throw new Error("not valid JSON, and line " + (i + 1) + " is not a JSON value either"); }
+        }
+    }
+    if (path) {
+        for (const p of path.split(".").filter(Boolean)) {
+            if (data && typeof data === "object" && hasOwn(data, p)) data = data[p];
+            else throw new Error('JSON path "' + path + '" not found at "' + p + '"');
+        }
+    } else if (data && typeof data === "object" && !Array.isArray(data)) {
+        const ks = Object.keys(data).filter(k => Array.isArray(data[k]));
+        if (ks.length === 1) data = data[ks[0]];
+    }
+    if (!Array.isArray(data)) data = [data];
+    if (data.length && data.every(Array.isArray)) {
+        const aoa = data.map(r => r.map(cellStr));
+        return fromAoa(aoa, header == null ? guessHeader(aoa) : header, true, false);
+    }
+    const idx = new Map(), cols = [], recs = [];
+    for (const item of data) {
+        const rec = new Map();
+        if (item && typeof item === "object" && !Array.isArray(item)) flat(item, "", rec, flatten);
+        else rec.set("value", cellStr(item));
+        for (const k of rec.keys()) if (!idx.has(k)) { idx.set(k, cols.length); cols.push(k); }
+        recs.push(rec);
+    }
+    return {
+        cols,
+        rows: recs.map(rec => {
+            const r = new Array(cols.length).fill("");
+            for (const [k, v] of rec) r[idx.get(k)] = v;
+            return r;
+        })
+    };
+}
+
+/* Array of arrays to table: header, blank rows, ragged rows. */
+function fromAoa(aoa, header, skipBlank, trim, prefix) {
+    prefix = prefix || "col";
+    if (trim) aoa = aoa.map(r => r.map(c => c.trim()));
+    if (skipBlank) aoa = aoa.filter(r => r.some(c => c.trim() !== ""));
+    let w = 0;
+    for (const r of aoa) if (r.length > w) w = r.length;
+    let head = [];
+    if (header && aoa.length) { head = aoa[0].map(c => c.trim()); aoa = aoa.slice(1); }
+    const cols = [];
+    for (let i = 0; i < w; i++) cols.push(head[i] || (w === 1 && prefix !== "col" ? prefix : prefix + "_" + (i + 1)));
+    return {
+        cols: uniq(cols),
+        rows: aoa.map(r => r.length === w ? r : r.concat(new Array(w - r.length).fill("")))
+    };
+}
+
+/* ---------- detection ---------- */
+const looksData = v => {
+    v = v.trim();
+    return v !== "" && (/^[-+]?[\d.,:\/\s]+$/.test(v) || /^\d{4}-\d\d-\d\d/.test(v) || /^(true|false|null)$/i.test(v));
+};
+function guessHeader(rows) {
+    if (!rows.length) return false;
+    const h = rows[0].map(c => String(c).trim());
+    if (h.some(c => !c)) return false;
+    if (new Set(h).size !== h.length) return false;
+    return !h.some(looksData);
+}
+function scoreRows(rows) {
+    const cnt = new Map();
+    for (const r of rows) cnt.set(r.length, (cnt.get(r.length) || 0) + 1);
+    let mode = 0, f = 0;
+    for (const [k, v] of cnt) if (v > f || (v === f && k > mode)) { mode = k; f = v; }
+    return { mode, cons: rows.length ? f / rows.length : 0 };
+}
+const FMT_NAMES = { delim: "delimited", fixed: "fixed width", json: "JSON", md: "Markdown table", kv: "key=value", lines: "plain lines", auto: "auto" };
+const DELIM_NAMES = { ",": "comma", "\t": "tab", ";": "semicolon", "|": "pipe", "ws": "whitespace", " ": "whitespace" };
+
+/* Fixed width columns: character positions that are blank on every sampled
+   line, with ink either side, are column boundaries. */
+function detectFixed(lines) {
+    if (lines.length < 3) return null;
+    const CAP = 4000;
+    let w = 0;
+    for (const l of lines) w = Math.max(w, Math.min(l.length, CAP));
+    if (w < 4) return null;
+    const ink = new Array(w).fill(0);
+    for (const l of lines) {
+        const s = l.slice(0, CAP);
+        for (let i = 0; i < s.length; i++) if (s[i] !== " " && s[i] !== "\t") ink[i]++;
+    }
+    /* A gap of a single space is usually a word space in free text, so a
+       boundary needs a blank run of at least two characters. */
+    const cuts = [];
+    let gapRun = 0;
+    for (let i = 0; i < w; i++) {
+        if (ink[i] === 0) { gapRun++; continue; }
+        if (gapRun >= 2 && i > gapRun) cuts.push(i);
+        gapRun = 0;
+    }
+    if (cuts.length < 2 || cuts.length > 60) return null;
+    const rows = parseFixed(lines.join("\n"), cuts).map(r => r.map(c => c.trim()));
+    return { cuts, header: guessHeader(rows) };
+}
+
+/* A log line with a stable prefix: the leading fields have the same shape on
+   every line and the rest of the line is one message. */
+const TOK_CLASS = [
+    [/^\d+$/, "int"],
+    [/^[-+]?\d+[.,]\d+$/, "number"],
+    [/^\d{1,4}[-./]\d{1,2}([-./]\d{1,4})?$/, "date"],
+    [/^\d{1,2}:\d{2}(:\d{2}([.,]\d+)?)?$/, "time"],
+    [/^\d{1,3}(\.\d{1,3}){3}$/, "ip"],
+    [/:$/, "label"],
+    [/^[\[\](){}<>|*#+=~^&%$!?,;:._-]+$/, "punct"],
+    [/^[A-Za-z]$/, "letter"]
+];
+function tokClass(t) {
+    for (const [re, c] of TOK_CLASS) if (re.test(t)) return c;
+    return "word";
+}
+function detectPrefix(lines) {
+    if (lines.length < 3) return null;
+    const toks = lines.map(l => l.trim().split(/\s+/).filter(Boolean));
+    let min = Infinity;
+    for (const t of toks) min = Math.min(min, t.length);
+    if (min < 3) return null;
+    const limit = Math.min(min, 16);
+    let lastStruct = 0, colon = 0;
+    for (let k = 0; k < limit; k++) {
+        const cnt = new Map();
+        for (const t of toks) { const c = tokClass(t[k]); cnt.set(c, (cnt.get(c) || 0) + 1); }
+        let best = "", bn = 0;
+        for (const [c, v] of cnt) if (v > bn) { best = c; bn = v; }
+        if (bn < toks.length * 0.9) break;
+        if (best !== "word") lastStruct = k + 1;
+        if (best === "label") { colon = k + 1; break; }
+    }
+    const fields = colon || lastStruct;
+    if (fields < 2 || fields >= min) return null;
+    return { fields, colon: !!colon };
+}
+
+function detect(text, from, to) {
+    text = String(text || "").replace(/^\uFEFF/, "");
+    const lines = text.split(/\r\n|\n|\r/);
+    from = Math.max(1, Math.floor(from) || 1);
+    to = Math.floor(to) || 0;
+    if (to < from) to = from + 49;
+    const sample = lines.slice(from - 1, to).filter(l => l.trim() !== "");
+    const res = { format: "lines", delim: null, kvPair: null, anyChar: false, collapse: false, maxCols: 0, fixedSpec: "", header: false, cols: 1, info: "", from, to: Math.min(to, lines.length), sampled: sample.length };
+    if (!sample.length) { res.info = "no non-empty lines in that range"; return res; }
+
+    const t = text.trim();
+    if (t[0] === "[" || t[0] === "{") {
+        try { JSON.parse(t); return Object.assign(res, { format: "json", info: "whole input is valid JSON" }); } catch (e) {}
+        const ok = sample.filter(l => { try { const v = JSON.parse(l); return v !== null && typeof v === "object"; } catch (e) { return false; } }).length;
+        if (ok >= sample.length * 0.9) return Object.assign(res, { format: "json", info: ok + "/" + sample.length + " sampled lines are JSON objects (JSON lines)" });
+    }
+
+    const mdSep = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
+    const piped = sample.filter(l => l.includes("|")).length;
+    if (piped >= sample.length * 0.8 && sample.some(l => l.includes("|") && mdSep.test(l))) {
+        const rows = parseMD(sample.join("\n"));
+        return Object.assign(res, { format: "md", header: true, cols: rows[0] ? rows[0].length : 0, info: "pipe table with a --- separator row" });
+    }
+
+    const kvRe = new RegExp("(?:^|[\\s,;|])" + KEY + "=(?!=)", "g");
+    const sepCount = { ws: 0, ",": 0, ";": 0, "|": 0 };
+    let kvHit = 0;
+    for (const l of sample) {
+        const ms = l.match(kvRe) || [];
+        if (ms.length >= 2) kvHit++;
+        for (const m of ms) {
+            const c = m[0];
+            if (c === "," || c === ";" || c === "|") sepCount[c]++;
+            else if (/\s/.test(c)) sepCount.ws++;
+        }
+    }
+    if (kvHit >= sample.length * 0.8) {
+        let best = "ws", n = sepCount.ws;
+        for (const k of [",", ";", "|"]) if (sepCount[k] > n) { best = k; n = sepCount[k]; }
+        return Object.assign(res, {
+            format: "kv", kvPair: best === "ws" ? " " : best,
+            info: kvHit + "/" + sample.length + " sampled lines have 2+ key=value pairs, pairs split by " + (best === "ws" ? "whitespace" : DELIM_NAMES[best])
+        });
+    }
+
+    const sj = sample.join("\n");
+    let best = null;
+    for (const d of [",", "\t", ";", "|"]) {
+        const rows = parseDSV(sj, d, '"'), s = scoreRows(rows);
+        if (s.mode < 2) continue;
+        if (!best || s.cons > best.cons + 0.05 || (Math.abs(s.cons - best.cons) <= 0.05 && s.mode > best.mode))
+            best = { d, rows, mode: s.mode, cons: s.cons };
+    }
+    if (best && best.cons >= 0.6) {
+        return Object.assign(res, {
+            format: "delim", delim: best.d, header: guessHeader(best.rows), cols: best.mode,
+            info: DELIM_NAMES[best.d] + " delimited, " + best.mode + " columns on " + Math.round(best.cons * 100) + "% of sampled lines"
+        });
+    }
+    const wr = parseDSV(sj, "ws", '"'), ws = scoreRows(wr);
+    if (ws.mode > 1 && ws.cons >= 0.8) {
+        return Object.assign(res, {
+            format: "delim", delim: "ws", header: guessHeader(wr), cols: ws.mode,
+            info: "whitespace aligned, " + ws.mode + " columns on " + Math.round(ws.cons * 100) + "% of sampled lines"
+        });
+    }
+    const pre = detectPrefix(sample);
+    if (pre && pre.colon) {
+        return Object.assign(res, {
+            format: "delim", delim: "ws", maxCols: pre.fields + 1, cols: pre.fields + 1,
+            info: pre.fields + " whitespace fields with the same shape on every sampled line, the rest of each line kept as one message column"
+        });
+    }
+    const fx = detectFixed(sample);
+    if (fx) {
+        return Object.assign(res, {
+            format: "fixed", fixedSpec: fx.cuts.join(","), header: fx.header, cols: fx.cuts.length + 1,
+            info: (fx.cuts.length + 1) + " fixed width columns, cuts at " + fx.cuts.join(", ")
+        });
+    }
+    if (pre) {
+        return Object.assign(res, {
+            format: "delim", delim: "ws", maxCols: pre.fields + 1, cols: pre.fields + 1,
+            info: pre.fields + " whitespace fields with the same shape on every sampled line, the rest of each line kept as one message column"
+        });
+    }
+    res.info = "no consistent structure found, one column per line";
+    return res;
+}
+function describeDetect(d) {
+    return "lines " + d.from + "-" + d.to + " (" + d.sampled + " non-empty): " + FMT_NAMES[d.format] +
+        (d.format === "delim" || d.format === "md" || d.format === "fixed" ? ", header " + (d.header ? "yes" : "no") : "") + ". " + d.info;
+}
+function applyDetect(p, d) {
+    p.format = d.format;
+    if (d.delim) p.delim = d.delim;
+    if (d.kvPair) p.kvPair = d.kvPair;
+    p.anyChar = !!d.anyChar;
+    p.collapse = !!d.collapse;
+    p.maxCols = d.maxCols || 0;
+    if (d.format === "fixed") { p.fixedMode = "positions"; p.fixedSpec = d.fixedSpec; }
+    if (d.format === "delim" || d.format === "md") p.header = d.header;
+}
+
+/* ---------- parse one source ---------- */
+function parseSource(text, p) {
+    text = String(text || "").replace(/^\uFEFF/, "");
+    let fmt = p.format, delim = p.delim, kvPair = p.kvPair, det = null;
+    if (fmt === "auto") {
+        det = detect(text, p.detFrom, p.detTo);
+        fmt = det.format;
+        if (det.delim) delim = det.delim;
+        if (det.kvPair) kvPair = det.kvPair;
+    }
+    if (!text.trim()) return { table: { cols: [], rows: [] }, det, fmt };
+    if (fmt === "json") return { table: jsonTable(text, p.jsonPath, p.flatten, det ? null : p.header), det, fmt };
+
+    let body = text;
+    if (p.skip > 0 || p.comment) {
+        let lines = text.split(/\r\n|\n|\r/);
+        if (p.skip > 0) lines = lines.slice(p.skip);
+        if (p.comment) lines = lines.filter(l => !l.trimStart().startsWith(p.comment));
+        body = lines.join("\n");
+    }
+    let table;
+    if (fmt === "kv") {
+        table = parseKV(body, p.kvSep, kvPair);
+    } else {
+        let aoa;
+        if (fmt === "md") aoa = parseMD(body);
+        else if (fmt === "lines") aoa = body.split(/\r\n|\n|\r/).map(l => [l]);
+        else if (fmt === "fixed") aoa = parseFixed(body, det ? cutsFromSpec(det.fixedSpec, "positions") : cutsFromSpec(p.fixedSpec, p.fixedMode));
+        else aoa = parseDSV(body, delim === "ws" ? "ws" : unesc(delim), p.quote,
+            { anyChar: p.anyChar, collapse: p.collapse, max: det ? det.maxCols : p.maxCols });
+        const header = det ? det.header : (fmt === "md" || fmt === "delim" || fmt === "lines" || fmt === "fixed" ? p.header : false);
+        table = fromAoa(aoa, header, p.skipBlank, p.trim || fmt === "fixed", fmt === "lines" ? "line" : "col");
+    }
+    return { table, det, fmt };
+}
+
+/* ============================================================
+   Combine sources
+   ============================================================ */
+function join2(A, B, keys, type, suffix) {
+    const ka = keys.map(k => A.cols.indexOf(k)), kb = keys.map(k => B.cols.indexOf(k));
+    const kbSet = new Set(kb);
+    const bOther = [];
+    B.cols.forEach((c, i) => { if (!kbSet.has(i)) bOther.push(i); });
+    const aNames = new Set(A.cols);
+    const bNames = bOther.map(i => aNames.has(B.cols[i]) ? B.cols[i] + "_" + suffix : B.cols[i]);
+    const keyOf = (r, ix) => ix.map(j => String(r[j]).trim()).join("\u0001");
+    const idx = new Map();
+    B.rows.forEach((r, i) => {
+        const k = keyOf(r, kb);
+        if (!idx.has(k)) idx.set(k, []);
+        idx.get(k).push(i);
+    });
+    const used = new Set(), rows = [];
+    for (const r of A.rows) {
+        const m = idx.get(keyOf(r, ka));
+        if (m) for (const bi of m) { used.add(bi); rows.push(r.concat(bOther.map(j => B.rows[bi][j]))); }
+        else if (type !== "inner") rows.push(r.concat(bOther.map(() => "")));
+    }
+    if (type === "full") {
+        B.rows.forEach((r, i) => {
+            if (used.has(i)) return;
+            const row = new Array(A.cols.length).fill("");
+            ka.forEach((ai, x) => { row[ai] = r[kb[x]]; });
+            rows.push(row.concat(bOther.map(j => r[j])));
+        });
+    }
+    return { cols: uniq(A.cols.concat(bNames)), rows };
+}
+function combineTables(tables, names, c) {
+    if (c.mode === "join") {
+        const keys = (c.keys || []).filter(Boolean);
+        if (!keys.length) throw new Error("tick at least one key column to join on");
+        tables.forEach((t, k) => keys.forEach(key => {
+            if (!t.cols.includes(key)) throw new Error('key "' + key + '" is missing from ' + names[k]);
+        }));
+        let r = tables[0];
+        for (let k = 1; k < tables.length; k++) r = join2(r, tables[k], keys, c.type, slug(names[k]) || "s" + (k + 1));
+        return r;
+    }
+    const cols = [], idx = new Map();
+    if (c.addSource) { idx.set("_source", 0); cols.push("_source"); }
+    tables.forEach(t => t.cols.forEach(n => { if (!idx.has(n)) { idx.set(n, cols.length); cols.push(n); } }));
+    const rows = [];
+    tables.forEach((t, k) => {
+        const map = t.cols.map(n => idx.get(n));
+        for (const r of t.rows) {
+            const o = new Array(cols.length).fill("");
+            if (c.addSource) o[0] = names[k];
+            for (let i = 0; i < r.length; i++) o[map[i]] = r[i];
+            rows.push(o);
+        }
+    });
+    return { cols, rows };
+}
+
+/* ============================================================
+   Steps
+   ============================================================ */
+const OPS = [
+    ["contains", "contains"], ["!contains", "does not contain"],
+    ["equals", "equals"], ["!equals", "does not equal"],
+    ["starts", "starts with"], ["ends", "ends with"],
+    ["regex", "matches regex"], ["!regex", "does not match regex"],
+    ["gt", "greater than"], ["gte", "greater or equal"],
+    ["lt", "less than"], ["lte", "less or equal"],
+    ["empty", "is empty"], ["!empty", "is not empty"]
+];
+const SORT_TYPES = [["auto", "auto"], ["text", "text"], ["number", "number"], ["date", "date/time"], ["ip", "IPv4"]];
+
+const STEPS = {
+    columns:   { label: "Columns: keep, drop, rename, reorder", def: () => ({ cols: [], keepNew: true }) },
+    filter:    { label: "Filter rows", def: () => ({ col: "*", op: "contains", val: "", ci: true }), enums: { op: OPS.map(o => o[0]) } },
+    sort:      { label: "Sort rows", def: () => ({ keys: [{ col: "", dir: "asc", type: "auto" }] }) },
+    dedupe:    { label: "Remove duplicates", def: () => ({ cols: [], keep: "first", ci: false, trim: true }), enums: { keep: ["first", "last"] } },
+    kvcells:   { label: "key=value cells to columns", def: () => ({ sep: "=", keepOther: true }) },
+    split:     { label: "Split a column", def: () => ({ col: "", by: ",", regex: false, limit: 0, keep: false }) },
+    merge:     { label: "Merge columns", def: () => ({ cols: [], sep: " ", name: "merged", skipEmpty: true, drop: true }) },
+    extract:   { label: "Extract with regex", def: () => ({ col: "", pattern: "", ci: false, keep: true }) },
+    replace:   { label: "Find and replace", def: () => ({ col: "*", find: "", repl: "", regex: false, ci: false }) },
+    clean:     { label: "Clean text", def: () => ({ col: "*", trim: true, collapse: false, unquote: false, kase: "none" }), enums: { kase: ["none", "upper", "lower"] } },
+    slice:     { label: "Keep a row range", def: () => ({ from: 1, to: 0 }) },
+    transpose: { label: "Transpose", def: () => ({ first: false }) }
+};
+
+function colIndex(t, name) {
+    if (!name) throw new Error("choose a column");
+    const i = t.cols.indexOf(name);
+    if (i < 0) throw new Error('column "' + name + '" not found');
+    return i;
+}
+function mapCells(t, col, f) {
+    if (col === "*") return { cols: t.cols, rows: t.rows.map(r => r.map(f)) };
+    const ci = colIndex(t, col);
+    return { cols: t.cols, rows: t.rows.map(r => { const n = r.slice(); n[ci] = f(n[ci]); return n; }) };
+}
+/* Replace column ci with new columns, optionally keeping the original. */
+function insertCols(t, ci, keep, names, getVals) {
+    const cut = ci + (keep ? 1 : 0);
+    return {
+        cols: uniq(t.cols.slice(0, cut).concat(names, t.cols.slice(ci + 1))),
+        rows: t.rows.map((r, j) => r.slice(0, cut).concat(getVals(r, j), r.slice(ci + 1)))
+    };
+}
+function splitN(s, re, limit) {
+    const out = [];
+    let last = 0, m;
+    re.lastIndex = 0;
+    while ((limit <= 0 || out.length < limit - 1) && (m = re.exec(s))) {
+        if (m[0] === "") { re.lastIndex++; if (re.lastIndex > s.length) break; continue; }
+        out.push(s.slice(last, m.index));
+        last = m.index + m[0].length;
+    }
+    out.push(s.slice(last));
+    return out;
+}
+function colEntries(s, cols) {
+    const inSet = new Set(cols), seen = new Set(), out = [];
+    for (const e of s.cols) if (inSet.has(e.src) && !seen.has(e.src)) { seen.add(e.src); out.push(e); }
+    for (const c of cols) if (!seen.has(c)) out.push({ src: c, name: c, keep: s.keepNew !== false });
+    return out;
+}
+
+const STEP_FN = {
+    columns(t, s) {
+        const idx = new Map(t.cols.map((c, i) => [c, i]));
+        const plan = colEntries(s, t.cols).filter(e => e.keep !== false).map(e => [idx.get(e.src), (e.name || "").trim() || e.src]);
+        return {
+            cols: uniq(plan.map(p => p[1])),
+            rows: t.rows.map(r => plan.map(p => r[p[0]])),
+            info: plan.length + " of " + t.cols.length + " columns kept"
+        };
+    },
+
+    filter(t, s) {
+        const neg = s.op.startsWith("!"), op = neg ? s.op.slice(1) : s.op;
+        const ci = !!s.ci, val = String(s.val == null ? "" : s.val), cv = ci ? val.toLowerCase() : val;
+        const low = v => ci ? v.toLowerCase() : v;
+        let test;
+        switch (op) {
+            case "contains": test = v => low(v).includes(cv); break;
+            case "equals":   test = v => low(v) === cv; break;
+            case "starts":   test = v => low(v).startsWith(cv); break;
+            case "ends":     test = v => low(v).endsWith(cv); break;
+            case "regex":    { const re = mkRe(val, ci ? "i" : ""); test = v => re.test(v); break; }
+            case "empty":    test = v => v.trim() === ""; break;
+            case "gt": case "gte": case "lt": case "lte":
+                test = v => {
+                    if (v.trim() === "") return false;
+                    const c = cmpAuto(v, val);
+                    return op === "gt" ? c > 0 : op === "gte" ? c >= 0 : op === "lt" ? c < 0 : c <= 0;
+                };
+                break;
+            default: throw new Error("unknown condition");
+        }
+        const any = s.col === "*", i = any ? -1 : colIndex(t, s.col);
+        const rows = t.rows.filter(r => { const hit = any ? r.some(test) : test(r[i]); return neg ? !hit : hit; });
+        return { cols: t.cols, rows, info: "kept " + rows.length + " of " + t.rows.length + " rows" };
+    },
+
+    sort(t, s) {
+        const keys = s.keys.filter(k => k.col);
+        if (!keys.length) throw new Error("choose a column to sort by");
+        const EXT = {
+            number: v => { const n = num(v); return isNaN(n) ? null : n; },
+            date: v => { const n = Date.parse(v); return isNaN(n) ? null : n; },
+            ip: v => ipNum(v)
+        };
+        const ks = keys.map(k => ({ i: colIndex(t, k.col), d: k.dir === "desc" ? -1 : 1, ext: EXT[k.type] || null, cmp: k.type === "text" ? collText.compare : cmpAuto }));
+        const dec = t.rows.map(r => ({ r, k: ks.map(k => k.ext ? k.ext(r[k.i]) : r[k.i]) }));
+        dec.sort((a, b) => {
+            for (let j = 0; j < ks.length; j++) {
+                const k = ks[j], x = a.k[j], y = b.k[j];
+                if (k.ext) {
+                    if (x === null || y === null) {
+                        if (x === null && y === null) { const c = coll.compare(a.r[k.i], b.r[k.i]); if (c) return c; continue; }
+                        return x === null ? 1 : -1;
+                    }
+                    if (x !== y) return (x < y ? -1 : 1) * k.d;
+                } else {
+                    const ex = x.trim() === "", ey = y.trim() === "";
+                    if (ex || ey) { if (ex && ey) continue; return ex ? 1 : -1; }
+                    const c = k.cmp(x, y);
+                    if (c) return (c < 0 ? -1 : 1) * k.d;
+                }
+            }
+            return 0;
+        });
+        return { cols: t.cols, rows: dec.map(o => o.r) };
+    },
+
+    dedupe(t, s) {
+        const ix = (s.cols.length ? s.cols : t.cols).map(c => colIndex(t, c));
+        const norm = v => { if (s.trim) v = v.trim(); if (s.ci) v = v.toLowerCase(); return v; };
+        const seen = new Set(), out = [];
+        const src = s.keep === "last" ? t.rows.slice().reverse() : t.rows;
+        for (const r of src) {
+            const k = ix.map(i => norm(r[i])).join("\u0001");
+            if (!seen.has(k)) { seen.add(k); out.push(r); }
+        }
+        if (s.keep === "last") out.reverse();
+        return { cols: t.cols, rows: out, info: (t.rows.length - out.length) + " duplicates removed" };
+    },
+
+    kvcells(t, s) {
+        const re = new RegExp("^\\s*(" + KEY + ")\\s*" + escRe(s.sep || "=") + "\\s*([\\s\\S]*)$");
+        const idx = new Map(), cols = [];
+        const add = k => { if (!idx.has(k)) { idx.set(k, cols.length); cols.push(k); } };
+        let hits = 0;
+        const recs = t.rows.map(r => {
+            const rec = new Map();
+            r.forEach((v, i) => {
+                const m = re.exec(v);
+                if (m) {
+                    hits++;
+                    if (!rec.has(m[1])) { rec.set(m[1], unq(m[2].trim())); add(m[1]); }
+                } else if (s.keepOther && v.trim() !== "") {
+                    const k = t.cols[i];
+                    if (!rec.has(k)) { rec.set(k, v); add(k); }
+                }
+            });
+            return rec;
+        });
+        if (!hits) throw new Error("no key" + (s.sep || "=") + "value cells found");
+        return {
+            cols,
+            rows: recs.map(rec => { const o = new Array(cols.length).fill(""); for (const [k, v] of rec) o[idx.get(k)] = v; return o; }),
+            info: hits + " key/value cells, " + cols.length + " columns"
+        };
+    },
+
+    split(t, s) {
+        const ci = colIndex(t, s.col);
+        if (s.by === "") throw new Error("enter a separator");
+        const re = s.regex ? mkRe(s.by, "g") : new RegExp(escRe(unesc(s.by)), "g");
+        const lim = Math.max(0, Math.floor(s.limit) || 0);
+        const parts = t.rows.map(r => splitN(r[ci], re, lim));
+        let k = 0;
+        for (const p of parts) if (p.length > k) k = p.length;
+        if (k > MAX_NEW_COLS) throw new Error("would create " + k + " columns, set a max parts value");
+        const names = [];
+        for (let i = 0; i < k; i++) names.push(s.col + "_" + (i + 1));
+        const out = insertCols(t, ci, s.keep, names, (r, j) => names.map((_, i) => parts[j][i] == null ? "" : parts[j][i]));
+        out.info = "split into " + k + " columns";
+        return out;
+    },
+
+    merge(t, s) {
+        if (s.cols.length < 2) throw new Error("tick at least two columns");
+        const ix = s.cols.map(c => colIndex(t, c)).sort((a, b) => a - b);
+        const sep = unesc(s.sep), pos = ix[0], drop = s.drop ? new Set(ix) : new Set();
+        const plan = [];
+        t.cols.forEach((c, i) => { if (i === pos) plan.push(-1); if (!drop.has(i)) plan.push(i); });
+        const joinRow = r => ix.map(i => r[i]).filter(v => !s.skipEmpty || v.trim() !== "").join(sep);
+        return {
+            cols: uniq(plan.map(i => i < 0 ? (s.name || "merged") : t.cols[i])),
+            rows: t.rows.map(r => plan.map(i => i < 0 ? joinRow(r) : r[i]))
+        };
+    },
+
+    extract(t, s) {
+        const ci = colIndex(t, s.col);
+        if (!s.pattern) throw new Error("enter a pattern");
+        const flags = s.ci ? "i" : "";
+        const re = mkRe(s.pattern, flags);
+        const probe = mkRe(s.pattern + "|", flags).exec("");
+        const groups = probe.length - 1, named = probe.groups ? Object.keys(probe.groups) : [];
+        let names, get;
+        if (named.length) { names = named; get = m => named.map(n => m.groups[n] == null ? "" : m.groups[n]); }
+        else if (groups) { names = []; for (let i = 1; i <= groups; i++) names.push(s.col + "_" + i); get = m => m.slice(1).map(v => v == null ? "" : v); }
+        else { names = [s.col + "_match"]; get = m => [m[0]]; }
+        let hits = 0;
+        const out = insertCols(t, ci, s.keep, names, r => {
+            const m = re.exec(r[ci]);
+            if (m) { hits++; return get(m); }
+            return names.map(() => "");
+        });
+        out.info = hits + " of " + t.rows.length + " rows matched";
+        return out;
+    },
+
+    replace(t, s) {
+        if (s.find === "") throw new Error("enter text to find");
+        let f;
+        if (s.regex) {
+            const re = mkRe(s.find, "g" + (s.ci ? "i" : "")), rep = unesc(s.repl);
+            f = v => v.replace(re, rep);
+        } else {
+            const find = unesc(s.find), rep = unesc(s.repl);
+            if (s.ci) { const re = new RegExp(escRe(find), "gi"); f = v => v.replace(re, () => rep); }
+            else f = v => v.split(find).join(rep);
+        }
+        return mapCells(t, s.col, f);
+    },
+
+    clean(t, s) {
+        return mapCells(t, s.col, v => {
+            if (s.trim) v = v.trim();
+            if (s.collapse) v = v.replace(/\s+/g, " ");
+            if (s.unquote) v = unq(v);
+            if (s.kase === "upper") v = v.toUpperCase();
+            else if (s.kase === "lower") v = v.toLowerCase();
+            return v;
+        });
+    },
+
+    slice(t, s) {
+        const from = Math.max(1, Math.floor(s.from) || 1), to = Math.floor(s.to) || 0;
+        return { cols: t.cols, rows: t.rows.slice(from - 1, to > 0 ? to : undefined) };
+    },
+
+    transpose(t, s) {
+        if (!t.cols.length) return t;
+        if (s.first) {
+            return {
+                cols: uniq([t.cols[0]].concat(t.rows.map(r => r[0]))),
+                rows: t.cols.slice(1).map((c, j) => [c].concat(t.rows.map(r => r[j + 1])))
+            };
+        }
+        return {
+            cols: uniq(["field"].concat(t.rows.map((_, i) => "row_" + (i + 1)))),
+            rows: t.cols.map((c, j) => [c].concat(t.rows.map(r => r[j])))
+        };
+    }
+};
+
+function runPipeline(t) {
+    const trace = [];
+    for (const s of state.steps) {
+        const before = t.cols;
+        if (!s.on) { trace.push({ cols: before, off: true }); continue; }
+        try {
+            const r = STEP_FN[s.type](t, s);
+            trace.push({ cols: before, info: r.info || "", size: r.rows.length + " rows x " + r.cols.length + " cols" });
+            t = { cols: r.cols, rows: r.rows };
+        } catch (e) {
+            trace.push({ cols: before, err: e.message || String(e) });
+        }
+    }
+    return { t, trace };
+}
+
+/* ============================================================
+   Writers
+   ============================================================ */
+const EXT = { csv: "csv", tsv: "tsv", json: "json", jsonl: "jsonl", md: "md" };
+const MIME = {
+    csv: "text/csv;charset=utf-8", tsv: "text/tab-separated-values;charset=utf-8",
+    json: "application/json;charset=utf-8", jsonl: "text/plain;charset=utf-8", md: "text/markdown;charset=utf-8"
+};
+const guardCell = v => /^[=+\-@\t\r]/.test(v) && !NUM_RE.test(v) ? "'" + v : v;
+function typed(v) {
+    if (v === "true") return true;
+    if (v === "false") return false;
+    if (/^-?(0|[1-9]\d{0,14})(\.\d+)?([eE][+-]?\d+)?$/.test(v)) { const n = Number(v); if (isFinite(n)) return n; }
+    return v;
+}
+function rowObj(cols, r, tv) {
+    const o = Object.create(null);
+    for (let i = 0; i < cols.length; i++) o[cols[i]] = tv(r[i] == null ? "" : r[i]);
+    return o;
+}
+function writeTable(t, o) {
+    const eol = o.eol === "crlf" ? "\r\n" : "\n";
+    const tv = o.typed ? typed : v => v;
+    let out;
+    switch (o.format) {
+        case "tsv":
+        case "csv": {
+            const d = o.format === "csv" ? "," : "\t";
+            const cell = v => {
+                v = v == null ? "" : String(v);
+                if (o.guard) v = guardCell(v);
+                return (v.includes(d) || v.includes('"') || v.includes("\n") || v.includes("\r")) ? '"' + v.replace(/"/g, '""') + '"' : v;
+            };
+            const lines = [];
+            if (o.header) lines.push(t.cols.map(cell).join(d));
+            for (const r of t.rows) lines.push(r.map(cell).join(d));
+            out = lines.length ? lines.join(eol) + eol : "";
+            break;
+        }
+        case "json": {
+            const data = o.shape === "arrays"
+                ? (o.header ? [t.cols] : []).concat(t.rows.map(r => r.map(tv)))
+                : t.rows.map(r => rowObj(t.cols, r, tv));
+            out = JSON.stringify(data, null, o.pretty ? 2 : 0).replace(/\n/g, eol) + eol;
+            break;
+        }
+        case "jsonl":
+            out = t.rows.map(r => JSON.stringify(rowObj(t.cols, r, tv))).join(eol) + (t.rows.length ? eol : "");
+            break;
+        case "md": {
+            const c = v => String(v == null ? "" : v).replace(/\|/g, "\\|").replace(/\r\n|\n|\r/g, " ");
+            if (!t.cols.length) { out = ""; break; }
+            const lines = ["| " + t.cols.map(c).join(" | ") + " |", "| " + t.cols.map(() => "---").join(" | ") + " |"];
+            for (const r of t.rows) lines.push("| " + r.map(c).join(" | ") + " |");
+            out = lines.join(eol) + eol;
+            break;
+        }
+        default: out = "";
+    }
+    return (o.bom ? "\uFEFF" : "") + out;
+}
+function splitParts(t, o) {
+    const n = t.rows.length;
+    if (o.split === "none" || !n) return [{ tag: "", t }];
+    if (o.split === "col") {
+        const ci = t.cols.indexOf(o.splitCol);
+        if (ci < 0) throw new Error("choose a column to split by");
+        const groups = new Map();
+        for (const r of t.rows) {
+            const v = r[ci];
+            if (!groups.has(v)) groups.set(v, []);
+            groups.get(v).push(r);
+        }
+        const used = new Set(), parts = [];
+        for (const [v, rows] of groups) {
+            const b = slug(v) || "blank";
+            let tg = b, k = 2;
+            while (used.has(tg.toLowerCase())) tg = b + "-" + (k++);
+            used.add(tg.toLowerCase());
+            parts.push({ tag: "_" + tg, t: { cols: t.cols, rows } });
+        }
+        return parts;
+    }
+    let size;
+    if (o.split === "pct") {
+        const p = Math.min(100, Math.max(0.01, Number(o.splitN) || 0));
+        size = Math.max(1, Math.ceil(n * p / 100));
+    } else {
+        size = Math.max(1, Math.floor(Number(o.splitN)) || 1);
+    }
+    const count = Math.ceil(n / size), w = String(count).length, parts = [];
+    for (let i = 0; i < count; i++)
+        parts.push({ tag: "_part" + String(i + 1).padStart(w, "0"), t: { cols: t.cols, rows: t.rows.slice(i * size, (i + 1) * size) } });
+    return parts;
+}
+
+/* ============================================================
+   State
+   ============================================================ */
+const blankParse = () => ({ format: "auto", delim: ",", quote: '"', anyChar: false, collapse: false, maxCols: 0, fixedMode: "positions", fixedSpec: "", header: true, skip: 0, comment: "", skipBlank: true, trim: false, kvSep: "=", kvPair: "auto", jsonPath: "", flatten: true, detFrom: 1, detTo: 50 });
+const blankOut = () => ({ format: "csv", shape: "objects", pretty: true, typed: false, header: true, guard: false, bom: false, eol: "lf", split: "none", splitN: 1000, splitCol: "", name: "" });
+const blankCombine = () => ({ mode: "append", type: "left", keys: [], addSource: false });
+function blankState() {
+    return { schema: APP.schema, app: APP.id, sources: [], active: 0, defParse: [], combine: blankCombine(), steps: [], out: blankOut() };
+}
+let state = blankState();
+const act = () => state.sources[state.active] || null;
+
+/* ---------- sanitising anything loaded from storage or a file ---------- */
+const ENUMS = {
+    format: ["auto", "delim", "fixed", "json", "md", "kv", "lines"], quote: ['"', "'", ""], kvPair: ["auto", " ", ",", ";", "|", "\t"], fixedMode: ["positions", "widths"],
+    oformat: ["csv", "tsv", "json", "jsonl", "md"], shape: ["objects", "arrays"], eol: ["lf", "crlf"], split: ["none", "rows", "pct", "col"],
+    mode: ["append", "join"], type: ["inner", "left", "full"]
+};
+function cleanObj(src, def, enums) {
+    if (!src || typeof src !== "object") return def;
+    for (const k of Object.keys(def)) {
+        if (!hasOwn(src, k)) continue;
+        const v = src[k];
+        if (typeof v !== typeof def[k] || Array.isArray(def[k])) continue;
+        if (typeof v === "string") { if (enums && enums[k] && !enums[k].includes(v)) continue; def[k] = v.slice(0, 5000); }
+        else if (typeof v === "number") { if (isFinite(v)) def[k] = v; }
+        else if (typeof v === "boolean") def[k] = v;
+    }
+    return def;
+}
+function cleanParse(p) {
+    const o = cleanObj(p, blankParse(), { format: ENUMS.format, quote: ENUMS.quote, kvPair: ENUMS.kvPair, fixedMode: ENUMS.fixedMode });
+    o.skip = Math.max(0, Math.floor(o.skip));
+    o.maxCols = Math.max(0, Math.floor(o.maxCols));
+    o.detFrom = Math.max(1, Math.floor(o.detFrom));
+    o.detTo = Math.max(1, Math.floor(o.detTo));
+    return o;
+}
+const cleanOut = o => cleanObj(o, blankOut(), { format: ENUMS.oformat, shape: ENUMS.shape, eol: ENUMS.eol, split: ENUMS.split });
+function cleanCombine(c) {
+    const o = cleanObj(c, blankCombine(), { mode: ENUMS.mode, type: ENUMS.type });
+    o.keys = c && Array.isArray(c.keys) ? c.keys.filter(k => typeof k === "string").slice(0, 50) : [];
+    return o;
+}
+function cleanStep(s) {
+    if (!s || typeof s !== "object" || typeof s.type !== "string" || !hasOwn(STEPS, s.type)) return null;
+    const def = STEPS[s.type].def();
+    const o = cleanObj(s, def, STEPS[s.type].enums);
+    for (const k of Object.keys(o)) {
+        if (!Array.isArray(o[k])) continue;
+        const v = Array.isArray(s[k]) ? s[k].slice(0, 5000) : null;
+        if (!v) continue;
+        if (s.type === "columns")
+            o[k] = v.filter(e => e && typeof e.src === "string").map(e => ({ src: e.src, name: typeof e.name === "string" ? e.name : e.src, keep: e.keep !== false }));
+        else if (s.type === "sort") {
+            const keys = v.filter(e => e && typeof e.col === "string").slice(0, 5)
+                .map(e => ({ col: e.col, dir: e.dir === "desc" ? "desc" : "asc", type: SORT_TYPES.some(x => x[0] === e.type) ? e.type : "auto" }));
+            if (keys.length) o[k] = keys;
+        }
+        else o[k] = v.filter(e => typeof e === "string");
+    }
+    o.id = uid();
+    o.type = s.type;
+    o.on = s.on !== false;
+    o.min = s.min === true;
+    return o;
+}
+function newStep(type) { return Object.assign({ id: uid(), type, on: true, min: false }, STEPS[type].def()); }
+
+/* ---------- autosave ---------- */
+let persistT, warnedQuota = false;
+function persistNow() {
+    clearTimeout(persistT);
+    if (store.set("state", JSON.stringify(state))) return;
+    const lite = Object.assign({}, state, { sources: state.sources.map(s => Object.assign({}, s, { text: "" })) });
+    store.set("state", JSON.stringify(lite));
+    if (!warnedQuota) { warnedQuota = true; notify("Data is too large to autosave. Settings are kept, the text is not.", true); }
+}
+function persist() { clearTimeout(persistT); persistT = setTimeout(persistNow, 400); }
+window.addEventListener("pagehide", persistNow);
+
+function restore() {
+    const raw = store.get("state");
+    if (!raw) return;
+    try {
+        const d = JSON.parse(raw);
+        if (!d || d.app !== APP.id) return;
+        state.sources = Array.isArray(d.sources)
+            ? d.sources.filter(s => s && typeof s.text === "string")
+                .map(s => ({ id: uid(), name: String(s.name || "source").slice(0, 120), text: s.text, parse: cleanParse(s.parse) }))
+            : [];
+        state.active = Math.min(Math.max(0, d.active | 0), Math.max(0, state.sources.length - 1));
+        state.defParse = Array.isArray(d.defParse) ? d.defParse.slice(0, 100).map(cleanParse) : [];
+        state.combine = cleanCombine(d.combine);
+        state.steps = Array.isArray(d.steps) ? d.steps.map(cleanStep).filter(Boolean) : [];
+        state.out = cleanOut(d.out);
+    } catch (e) {}
+}
+
+/* ============================================================
+   Recompute: parse (cached) -> combine -> steps -> previews
+   ============================================================ */
+const cache = new Map();
+function parsed(src) {
+    const key = JSON.stringify(src.parse);
+    const c = cache.get(src.id);
+    if (c && c.text === src.text && c.key === key) return c;
+    let r;
+    try { r = parseSource(src.text, src.parse); r.err = null; }
+    catch (e) { r = { table: { cols: [], rows: [] }, det: null, fmt: src.parse.format, err: e.message || String(e) }; }
+    r.text = src.text;
+    r.key = key;
+    cache.set(src.id, r);
+    return r;
+}
+
+let lastResult = { cols: [], rows: [] };
+let recT;
+function changed() { clearTimeout(recT); recompute(); persist(); }
+function changedSoon() { clearTimeout(recT); recT = setTimeout(() => { recompute(); persist(); }, 200); }
+
+function logLine(host, parts) {
+    host.textContent = "";
+    parts.forEach(([cls, txt]) => host.appendChild(el("span", cls, txt)));
+}
+const dims = t => t.rows.length + " rows x " + t.cols.length + " cols";
+
+function recompute() {
+    const srcs = state.sources;
+    const res = srcs.map(parsed);
+
+    res.forEach((r, i) => {
+        const span = countSpans.get(srcs[i].id);
+        if (span) span.textContent = r.err ? "error" : dims(r.table);
+    });
+
+    const a = res[state.active];
+    if (a) {
+        drawTable($("#parsePrev"), a.table, 50);
+        if (a.err) logLine($("#parseStat"), [["bad", "parse error: "], [null, a.err]]);
+        else logLine($("#parseStat"), [["a", dims(a.table)], [null, ", parsed as "], ["ok", FMT_NAMES[a.fmt] || a.fmt]]);
+        const det = a.det ? a.det : detectMsg.get(srcs[state.active].id);
+        if (det) logLine($("#detLog"), [[null, a.det ? "auto " : "detected "], ["a", describeDetect(det)]]);
+        else logLine($("#detLog"), [[null, "Detect reads the line range above and fills in the settings."]]);
+    } else {
+        $("#parsePrev").textContent = "";
+        $("#parseStat").textContent = "";
+    }
+
+    let base = { cols: [], rows: [] };
+    const good = [], names = [];
+    res.forEach((r, i) => { if (!r.err) { good.push(r.table); names.push(srcs[i].name); } });
+    const cinfo = $("#combineInfo");
+    cinfo.textContent = "";
+    if (srcs.length > 1) {
+        refreshKeyChips(good);
+        try {
+            base = good.length ? (good.length === 1 && state.combine.mode === "join" ? good[0] : combineTables(good, names, state.combine)) : base;
+            logLine(cinfo, [["ok", good.length + " sources combined: "], ["a", dims(base)]].concat(good.length < srcs.length ? [["warn", ", " + (srcs.length - good.length) + " skipped with parse errors"]] : []));
+        } catch (e) {
+            logLine(cinfo, [["bad", "combine: "], [null, e.message]]);
+        }
+    } else if (good.length) {
+        base = good[0];
+    }
+
+    const { t, trace } = runPipeline(base);
+    refreshers.forEach((r, i) => {
+        const tr = trace[i];
+        if (!tr || !r) return;
+        const sig = tr.cols.join("\u0001");
+        if (sig !== r.sig) { r.sig = sig; r.fns.forEach(f => f(tr.cols)); }
+        if (tr.err) logLine(r.msg, [["bad", "skipped: "], [null, tr.err]]);
+        else if (tr.off) logLine(r.msg, [["muted", "off"]]);
+        else logLine(r.msg, (tr.info ? [["ok", tr.info], [null, ", "]] : []).concat([["muted", tr.size || ""]]));
+    });
+    lastResult = t;
+
+    drawTable($("#resPrev"), t, PREVIEW_ROWS);
+    const errs = trace.filter(x => x.err).length;
+    logLine($("#resStat"), [["a", dims(t)]].concat(errs ? [["bad", ", " + errs + " step" + (errs > 1 ? "s" : "") + " skipped"]] : []));
+    $("#status").textContent = srcs.length ? dims(t) : "ready";
+
+    refreshSplitCol(t.cols);
+    renderOutPreview(t);
+}
+
+/* ---------- table preview ---------- */
+function drawTable(host, t, maxRows) {
+    host.textContent = "";
+    if (!t.cols.length) { host.appendChild(el("div", "empty", "Nothing to show yet.")); return; }
+    const wrap = el("div", "tbl-wrap"), tb = el("table", "grid-tbl");
+    const thead = el("thead"), hr = el("tr");
+    const nc = Math.min(t.cols.length, PREVIEW_COLS), nr = Math.min(t.rows.length, maxRows);
+    hr.appendChild(el("th", "rn", "#"));
+    for (let i = 0; i < nc; i++) { const th = el("th", null, t.cols[i]); th.title = t.cols[i]; hr.appendChild(th); }
+    thead.appendChild(hr);
+    tb.appendChild(thead);
+    const body = el("tbody");
+    for (let j = 0; j < nr; j++) {
+        const tr = el("tr"), r = t.rows[j];
+        tr.appendChild(el("td", "rn", String(j + 1)));
+        for (let i = 0; i < nc; i++) {
+            const v = r[i] == null ? "" : r[i];
+            const td = el("td", null, v);
+            if (v.length > 40) td.title = v.length > 2000 ? v.slice(0, 2000) + "..." : v;
+            tr.appendChild(td);
+        }
+        body.appendChild(tr);
+    }
+    tb.appendChild(body);
+    wrap.appendChild(tb);
+    host.appendChild(wrap);
+    if (nr < t.rows.length || nc < t.cols.length) {
+        host.appendChild(el("div", "note mt", "Showing " + nr + " of " + t.rows.length + " rows" +
+            (nc < t.cols.length ? " and " + nc + " of " + t.cols.length + " columns" : "") + ". Exports include everything."));
+    }
+}
+
+/* ---------- small ui builders ---------- */
+function opts(sel, list) {
+    sel.textContent = "";
+    list.forEach(([v, l]) => { const o = el("option", null, l); o.value = v; sel.appendChild(o); });
+}
+function mkSelect(list, value, onChange) {
+    const sel = el("select", "field");
+    opts(sel, list);
+    sel.value = value;
+    sel.addEventListener("change", () => onChange(sel.value));
+    return sel;
+}
+function fld(label, node) {
+    const l = el("label", "f");
+    l.appendChild(document.createTextNode(label));
+    l.appendChild(node);
+    return l;
+}
+function fillColSelect(sel, cols, value, anyLabel) {
+    sel.textContent = "";
+    const add = (v, l) => { const o = el("option", null, l); o.value = v; sel.appendChild(o); };
+    if (anyLabel) add("*", anyLabel); else add("", "(choose column)");
+    cols.forEach(c => add(c, c));
+    if (value && value !== "*" && !cols.includes(value)) add(value, value + " (missing)");
+    sel.value = value || (anyLabel ? "*" : "");
+}
+function fillChips(box, cols, selected, onChange) {
+    box.textContent = "";
+    const set = new Set(selected);
+    const all = cols.concat(selected.filter(c => !cols.includes(c)));
+    if (!all.length) { box.appendChild(el("span", "muted", "no columns")); return; }
+    all.forEach(c => {
+        const lab = el("label", "chip" + (cols.includes(c) ? "" : " missing"));
+        const cb = el("input");
+        cb.type = "checkbox";
+        cb.value = c;
+        cb.checked = set.has(c);
+        cb.addEventListener("change", () => onChange($$inside(box, "input").filter(x => x.checked).map(x => x.value)));
+        lab.append(cb, document.createTextNode(cols.includes(c) ? c : c + " (missing)"));
+        box.appendChild(lab);
+    });
+}
+const $$inside = (node, s) => Array.from(node.querySelectorAll(s));
+
+/* ============================================================
+   Sources
+   ============================================================ */
+const countSpans = new Map();
+const detectMsg = new Map();
+
+function pushSource(name, text) {
+    const i = state.sources.length;
+    const p = state.defParse[i] || state.defParse[0];
+    state.sources.push({
+        id: uid(),
+        name: String(name || "paste-" + (i + 1)).slice(0, 120),
+        text: String(text || "").replace(/^\uFEFF/, ""),
+        parse: p ? cleanParse(p) : blankParse()
+    });
+    state.active = state.sources.length - 1;
+}
+async function importFiles(list) {
+    const files = Array.from(list || []);
+    if (!files.length) return;
+    const big = files.filter(f => f.size > 100 * 1048576);
+    if (big.length && !confirm(big.length + " file(s) over 100 MB. The browser may struggle. Continue?")) return;
+    let added = 0;
+    for (const f of files) {
+        try {
+            const text = await readText(f);
+            if (text.slice(0, 4096).includes("\u0000")) { notify(f.name + " looks binary, skipped", true); continue; }
+            pushSource(f.name, text);
+            added++;
+        } catch (e) { notify("Could not read " + f.name, true); }
+    }
+    if (added) { renderAll(); persist(); notify(added + " file" + (added > 1 ? "s" : "") + " added"); }
+}
+
+function renderSources() {
+    const host = $("#srcList");
+    host.textContent = "";
+    countSpans.clear();
+    state.sources.forEach((s, i) => {
+        const w = el("div", "src" + (i === state.active ? " active" : ""));
+        const b = el("button", "nm", s.name);
+        b.type = "button";
+        b.title = "Edit this source";
+        b.addEventListener("click", () => { state.active = i; renderSources(); renderParse(); recompute(); persist(); });
+        const ct = el("span", "ct");
+        countSpans.set(s.id, ct);
+        const x = el("button", "btn btn-sm btn-danger", "x");
+        x.type = "button";
+        x.title = "Remove source";
+        x.addEventListener("click", () => {
+            if (s.text && !confirm('Remove "' + s.name + '"?')) return;
+            cache.delete(s.id);
+            detectMsg.delete(s.id);
+            state.sources.splice(i, 1);
+            if (state.active >= state.sources.length) state.active = Math.max(0, state.sources.length - 1);
+            renderAll();
+            persist();
+        });
+        w.append(b, ct, x);
+        host.appendChild(w);
+    });
+
+    const s = act(), ta = $("#srcText"), nm = $("#srcName"), note = $("#srcNote");
+    nm.disabled = !s;
+    nm.value = s ? s.name : "";
+    note.textContent = "";
+    if (!s) {
+        ta.readOnly = false;
+        if (document.activeElement !== ta) ta.value = "";
+    } else if (s.text.length > BIG_TEXT) {
+        ta.readOnly = true;
+        ta.value = s.text.slice(0, 200000) + "\n\n[view truncated]";
+        logLine(note, [["warn", fmtSize(s.text.length) + " loaded. "], [null, "The editor shows the first 200 KB and is read only for large inputs."]]);
+    } else {
+        ta.readOnly = false;
+        if (ta.value !== s.text) ta.value = s.text;
+    }
+    $("#combinePanel").hidden = state.sources.length < 2;
+}
+
+/* ---------- parse panel ---------- */
+const FORMATS = [["auto", "auto detect"], ["delim", "delimited (CSV, TSV, other)"], ["fixed", "fixed width columns"], ["json", "JSON or JSON lines"], ["md", "Markdown table"], ["kv", "key=value pairs"], ["lines", "plain lines"]];
+const DELIMS = [",", "\t", ";", "|", "ws"];
+const DELIM_OPTS = [[",", "comma ,"], ["\t", "tab"], [";", "semicolon ;"], ["|", "pipe |"], ["ws", "whitespace runs"], ["custom", "other..."]];
+const QUOTES = [['"', 'double "'], ["'", "single '"], ["", "none"]];
+const KVPAIRS = [["auto", "auto"], [" ", "whitespace"], [",", "comma"], [";", "semicolon"], ["|", "pipe"], ["\t", "tab"]];
+
+function parseVisibility() {
+    const s = act();
+    if (!s) return;
+    const f = s.parse.format;
+    $$(".pf-delim").forEach(n => { n.hidden = f !== "delim"; });
+    $("#pDelimCustomWrap").hidden = f !== "delim" || (DELIMS.includes(s.parse.delim) && !s.parse.anyChar);
+    $$(".pf-fixed").forEach(n => { n.hidden = f !== "fixed"; });
+    $$(".pf-kv").forEach(n => { n.hidden = f !== "kv"; });
+    $$(".pf-json").forEach(n => { n.hidden = f !== "json"; });
+    $$(".pf-text").forEach(n => { n.hidden = f === "json"; });
+    $$(".pf-header").forEach(n => { n.hidden = f === "auto" || f === "kv"; });
+}
+function renderParse() {
+    const s = act();
+    $("#parseBody").hidden = !s;
+    $("#parseEmpty").hidden = !!s;
+    $("#parseName").textContent = s ? s.name : "";
+    if (!s) return;
+    const p = s.parse;
+    $("#pFormat").value = p.format;
+    $("#pDelim").value = DELIMS.includes(p.delim) ? p.delim : "custom";
+    $("#pDelimCustom").value = DELIMS.includes(p.delim) ? "" : p.delim;
+    $("#pQuote").value = p.quote;
+    $("#pMaxCols").value = p.maxCols;
+    $("#pFixedMode").value = p.fixedMode;
+    $("#pFixedSpec").value = p.fixedSpec;
+    $("#pKvSep").value = p.kvSep;
+    $("#pKvPair").value = p.kvPair;
+    $("#pJsonPath").value = p.jsonPath;
+    $("#pSkip").value = p.skip;
+    $("#pComment").value = p.comment;
+    $("#pDetFrom").value = p.detFrom;
+    $("#pDetTo").value = p.detTo;
+    setToggle($("#tAnyChar"), p.anyChar);
+    setToggle($("#tCollapse"), p.collapse);
+    setToggle($("#tHeader"), p.header);
+    setToggle($("#tSkipBlank"), p.skipBlank);
+    setToggle($("#tTrim"), p.trim);
+    setToggle($("#tFlatten"), p.flatten);
+    parseVisibility();
+}
+
+/* ---------- combine panel ---------- */
+let keySig = null;
+function renderCombine() {
+    const c = state.combine;
+    $("#cMode").value = c.mode;
+    $("#cType").value = c.type;
+    setToggle($("#tAddSource"), c.addSource);
+    $$(".cj").forEach(n => { n.hidden = c.mode !== "join"; });
+    $$(".ca").forEach(n => { n.hidden = c.mode !== "append"; });
+    keySig = null;
+}
+function refreshKeyChips(tables) {
+    let common = tables.length ? tables[0].cols.slice() : [];
+    tables.slice(1).forEach(t => { const s = new Set(t.cols); common = common.filter(c => s.has(c)); });
+    const sig = common.join("\u0001") + "\u0002" + state.combine.keys.join("\u0001");
+    if (sig === keySig) return;
+    keySig = sig;
+    fillChips($("#cKeys"), common, state.combine.keys, v => {
+        state.combine.keys = v;
+        keySig = common.join("\u0001") + "\u0002" + v.join("\u0001");
+        changed();
+    });
+}
+
+/* ============================================================
+   Step cards
+   ============================================================ */
+let refreshers = [];
+
+function uiColSel(ctx, key, label, anyLabel) {
+    const sel = el("select", "field");
+    sel.addEventListener("change", () => { ctx.s[key] = sel.value; changed(); });
+    ctx.refresh.push(cols => fillColSelect(sel, cols, ctx.s[key], anyLabel));
+    return fld(label, sel);
+}
+function uiText(ctx, key, label, ph) {
+    const inp = el("input", "field");
+    inp.type = "text";
+    inp.spellcheck = false;
+    inp.value = ctx.s[key] == null ? "" : ctx.s[key];
+    if (ph) inp.placeholder = ph;
+    inp.addEventListener("input", () => { ctx.s[key] = inp.value; changedSoon(); });
+    return fld(label, inp);
+}
+function uiNum(ctx, key, label) {
+    const inp = el("input", "field");
+    inp.type = "number";
+    inp.min = "0";
+    inp.value = ctx.s[key];
+    inp.addEventListener("input", () => { ctx.s[key] = Math.max(0, Number(inp.value) || 0); changedSoon(); });
+    return fld(label, inp);
+}
+function uiSel(ctx, key, label, list) {
+    return fld(label, mkSelect(list, ctx.s[key], v => { ctx.s[key] = v; changed(); }));
+}
+function uiTog(ctx, key, label) {
+    const w = el("div", "toggle-item");
+    const sw = el("div", "toggle-switch");
+    sw.setAttribute("role", "switch");
+    sw.tabIndex = 0;
+    setToggle(sw, !!ctx.s[key]);
+    toggle(sw, on => { ctx.s[key] = on; changed(); });
+    w.append(el("span", "toggle-label", label), sw);
+    return w;
+}
+function uiChips(ctx, key, label) {
+    const w = el("div", "f"), box = el("div", "chips");
+    w.append(document.createTextNode(label), box);
+    ctx.refresh.push(cols => fillChips(box, cols, ctx.s[key], v => { ctx.s[key] = v; changed(); }));
+    return w;
+}
+const grid = (...nodes) => { const g = el("div", "grid"); g.append(...nodes); return g; };
+const togs = (...nodes) => { const r = el("div", "row togs"); r.append(...nodes); return r; };
+const noteEl = txt => el("div", "note step-note", txt);
+
+const BUILD = {
+    columns(ctx) {
+        const s = ctx.s, list = el("div", "collist");
+        let entries = [];
+        const commit = soon => {
+            const shown = new Set(entries.map(e => e.src));
+            s.cols = entries.concat(s.cols.filter(e => !shown.has(e.src)));
+            soon ? changedSoon() : changed();
+        };
+        const draw = () => {
+            list.textContent = "";
+            if (!entries.length) { list.appendChild(el("div", "muted", "No columns at this point.")); return; }
+            entries.forEach((e, k) => {
+                const row = el("div", "colrow" + (e.keep === false ? " off" : ""));
+                const cb = el("input");
+                cb.type = "checkbox";
+                cb.checked = e.keep !== false;
+                cb.title = "Keep this column";
+                cb.addEventListener("change", () => { e.keep = cb.checked; row.classList.toggle("off", !cb.checked); commit(); });
+                const src = el("span", "colsrc", e.src);
+                src.title = e.src;
+                const nm = el("input", "field");
+                nm.type = "text";
+                nm.spellcheck = false;
+                nm.value = e.name || e.src;
+                nm.title = "Output name";
+                nm.addEventListener("input", () => { e.name = nm.value; commit(true); });
+                const up = el("button", "btn btn-sm", "up");
+                up.disabled = k === 0;
+                up.addEventListener("click", () => { [entries[k - 1], entries[k]] = [entries[k], entries[k - 1]]; draw(); commit(); });
+                const dn = el("button", "btn btn-sm", "down");
+                dn.disabled = k === entries.length - 1;
+                dn.addEventListener("click", () => { [entries[k + 1], entries[k]] = [entries[k], entries[k + 1]]; draw(); commit(); });
+                row.append(cb, src, nm, up, dn);
+                list.appendChild(row);
+            });
+        };
+        ctx.refresh.push(cols => { entries = colEntries(s, cols); draw(); });
+        const all = el("button", "btn btn-sm", "Keep all");
+        all.addEventListener("click", () => { entries.forEach(e => { e.keep = true; }); draw(); commit(); });
+        const none = el("button", "btn btn-sm", "Drop all");
+        none.addEventListener("click", () => { entries.forEach(e => { e.keep = false; }); draw(); commit(); });
+        const bar = el("div", "row");
+        bar.append(all, none, el("div", "spacer"), uiTog(ctx, "keepNew", "Keep columns that appear later"));
+        ctx.body.append(list, bar);
+    },
+    filter(ctx) {
+        ctx.body.append(
+            grid(uiColSel(ctx, "col", "Column", "any column"), uiSel(ctx, "op", "Condition", OPS), uiText(ctx, "val", "Value", "text, number, date or regex")),
+            togs(uiTog(ctx, "ci", "Ignore case")),
+            noteEl("Greater/less compare numbers, IPv4 addresses and ISO dates properly. Stack several filters for AND."));
+    },
+    sort(ctx) {
+        const s = ctx.s, box = el("div");
+        s.keys.forEach((k, j) => {
+            const row = el("div", "sortkey");
+            const cs = el("select", "field");
+            cs.addEventListener("change", () => { k.col = cs.value; changed(); });
+            ctx.refresh.push(cols => fillColSelect(cs, cols, k.col, null));
+            const x = el("button", "btn btn-sm btn-danger", "x");
+            x.disabled = s.keys.length === 1;
+            x.addEventListener("click", () => { s.keys.splice(j, 1); renderSteps(); changed(); });
+            row.append(
+                fld(j ? "Then by" : "Sort by", cs),
+                fld("Order", mkSelect([["asc", "ascending"], ["desc", "descending"]], k.dir, v => { k.dir = v; changed(); })),
+                fld("Type", mkSelect(SORT_TYPES, k.type, v => { k.type = v; changed(); })),
+                x);
+            box.appendChild(row);
+        });
+        const add = el("button", "btn btn-sm", "Add key");
+        add.disabled = s.keys.length >= 5;
+        add.addEventListener("click", () => { s.keys.push({ col: "", dir: "asc", type: "auto" }); renderSteps(); changed(); });
+        ctx.body.append(box, add);
+    },
+    dedupe(ctx) {
+        ctx.body.append(
+            uiChips(ctx, "cols", "Compare on (none ticked = whole row)"),
+            grid(uiSel(ctx, "keep", "Keep", [["first", "first occurrence"], ["last", "last occurrence"]])),
+            togs(uiTog(ctx, "ci", "Ignore case"), uiTog(ctx, "trim", "Ignore surrounding spaces")));
+    },
+    kvcells(ctx) {
+        ctx.body.append(
+            grid(uiText(ctx, "sep", "Key/value separator", "=")),
+            togs(uiTog(ctx, "keepOther", "Keep cells that are not key=value")),
+            noteEl("For rows like timestamp=2026-05-20 20:05,src=10.0.0.1. Each key becomes a column and values line up by key, so missing or reordered fields do not shift anything."));
+    },
+    split(ctx) {
+        ctx.body.append(
+            grid(uiColSel(ctx, "col", "Column", null), uiText(ctx, "by", "Separator", ", or \\t or a regex"), uiNum(ctx, "limit", "Max parts (0 = all)")),
+            togs(uiTog(ctx, "regex", "Separator is a regex"), uiTog(ctx, "keep", "Keep original column")));
+    },
+    merge(ctx) {
+        ctx.body.append(
+            uiChips(ctx, "cols", "Columns to merge (joined in table order)"),
+            grid(uiText(ctx, "sep", "Separator", "space, - or \\t"), uiText(ctx, "name", "New column name", "merged")),
+            togs(uiTog(ctx, "skipEmpty", "Skip empty values"), uiTog(ctx, "drop", "Remove merged columns")));
+    },
+    extract(ctx) {
+        ctx.body.append(
+            grid(uiColSel(ctx, "col", "Column", null), uiText(ctx, "pattern", "Regex", "(?<ip>\\d+\\.\\d+\\.\\d+\\.\\d+):(?<port>\\d+)")),
+            togs(uiTog(ctx, "ci", "Ignore case"), uiTog(ctx, "keep", "Keep original column")),
+            noteEl("Each capture group becomes a column. Named groups (?<name>...) set the column name. No groups = the whole match."));
+    },
+    replace(ctx) {
+        ctx.body.append(
+            grid(uiColSel(ctx, "col", "Column", "all columns"), uiText(ctx, "find", "Find", ""), uiText(ctx, "repl", "Replace with", "empty deletes, $1 works with regex")),
+            togs(uiTog(ctx, "regex", "Regex"), uiTog(ctx, "ci", "Ignore case")));
+    },
+    clean(ctx) {
+        ctx.body.append(
+            grid(uiColSel(ctx, "col", "Column", "all columns"), uiSel(ctx, "kase", "Case", [["none", "unchanged"], ["upper", "UPPER"], ["lower", "lower"]])),
+            togs(uiTog(ctx, "trim", "Trim"), uiTog(ctx, "collapse", "Collapse whitespace"), uiTog(ctx, "unquote", "Strip surrounding quotes")));
+    },
+    slice(ctx) {
+        ctx.body.append(grid(uiNum(ctx, "from", "From row"), uiNum(ctx, "to", "To row (0 = last)")));
+    },
+    transpose(ctx) {
+        ctx.body.append(togs(uiTog(ctx, "first", "Use first column as the new header")));
+    }
+};
+
+function foldAllLabel() {
+    const b = $("#btnFoldAll");
+    b.disabled = !state.steps.length;
+    b.textContent = state.steps.length && state.steps.every(s => s.min) ? "Expand all" : "Collapse all";
+}
+function renderSteps() {
+    const host = $("#steps");
+    host.textContent = "";
+    refreshers = [];
+    if (!state.steps.length) {
+        host.appendChild(el("div", "empty", "No steps. The parsed data goes straight to output. Add steps above, they run top to bottom."));
+        foldAllLabel();
+        return;
+    }
+    foldAllLabel();
+    state.steps.forEach((s, i) => {
+        const card = el("div", "step" + (s.on ? "" : " off") + (s.min ? " min" : ""));
+        const head = el("div", "step-head");
+        const sw = el("div", "toggle-switch");
+        sw.setAttribute("role", "switch");
+        sw.tabIndex = 0;
+        sw.title = "Enable or disable this step";
+        setToggle(sw, s.on);
+        toggle(sw, on => { s.on = on; card.classList.toggle("off", !on); changed(); });
+        const btn = (txt, title, fn, dis) => {
+            const b = el("button", "btn btn-sm", txt);
+            b.title = title;
+            b.disabled = !!dis;
+            b.addEventListener("click", fn);
+            return b;
+        };
+        const move = d => { const j = i + d; [state.steps[i], state.steps[j]] = [state.steps[j], state.steps[i]]; renderSteps(); changed(); };
+        const label = String(i + 1).padStart(2, "0") + " " + STEPS[s.type].label;
+        const del = btn("x", "Remove step", () => {
+            if (!confirm("Remove step " + label + "?")) return;
+            state.steps.splice(i, 1);
+            renderSteps();
+            changed();
+        });
+        del.classList.add("btn-danger");
+        const fold = btn(s.min ? "show" : "hide", s.min ? "Show the settings" : "Hide the settings, keep the result line", () => {
+            s.min = !s.min;
+            card.classList.toggle("min", s.min);
+            fold.textContent = s.min ? "show" : "hide";
+            fold.title = s.min ? "Show the settings" : "Hide the settings, keep the result line";
+            foldAllLabel();
+            persist();
+        });
+        head.append(
+            el("span", "step-num", String(i + 1).padStart(2, "0")),
+            el("span", "step-title", STEPS[s.type].label),
+            el("div", "spacer"),
+            sw,
+            fold,
+            btn("up", "Move up", () => move(-1), i === 0),
+            btn("down", "Move down", () => move(1), i === state.steps.length - 1),
+            del);
+        const body = el("div", "step-body"), msg = el("div", "log step-msg");
+        const ctx = { s, body, refresh: [] };
+        BUILD[s.type](ctx);
+        card.append(head, body, msg);
+        host.appendChild(card);
+        refreshers[i] = { sig: null, fns: ctx.refresh, msg };
+    });
+}
+
+/* ============================================================
+   Output
+   ============================================================ */
+const OUTFMTS = [["csv", "CSV"], ["tsv", "TSV"], ["json", "JSON"], ["jsonl", "JSON lines"], ["md", "Markdown table"]];
+const SHAPES = [["objects", "array of objects"], ["arrays", "array of arrays"]];
+const EOLS = [["lf", "LF (Unix)"], ["crlf", "CRLF (Windows)"]];
+const SPLITS = [["none", "no, one file"], ["rows", "every N rows"], ["pct", "by percentage"], ["col", "one file per column value"]];
+
+function renderOut() {
+    const o = state.out;
+    $("#oFormat").value = o.format;
+    $("#oShape").value = o.shape;
+    $("#oEol").value = o.eol;
+    $("#oName").value = o.name;
+    $("#oSplit").value = o.split;
+    $("#oSplitN").value = o.splitN;
+    setToggle($("#tHeaderOut"), o.header);
+    setToggle($("#tPretty"), o.pretty);
+    setToggle($("#tTyped"), o.typed);
+    setToggle($("#tGuard"), o.guard);
+    setToggle($("#tBom"), o.bom);
+    outVisibility();
+}
+function outVisibility() {
+    const o = state.out, json = o.format === "json" || o.format === "jsonl";
+    $$(".of-json").forEach(n => { n.hidden = !json; });
+    $("#oShape").closest(".f").hidden = o.format !== "json";
+    $$(".of-dsv").forEach(n => { n.hidden = o.format !== "csv" && o.format !== "tsv"; });
+    $$(".of-hdr").forEach(n => { n.hidden = !(o.format === "csv" || o.format === "tsv" || (o.format === "json" && o.shape === "arrays")); });
+    $(".os-n").hidden = o.split !== "rows" && o.split !== "pct";
+    $(".os-col").hidden = o.split !== "col";
+    $("#oSplitNLabel").textContent = o.split === "pct" ? "Percent per file" : "Rows per file";
+}
+let splitSig = null;
+function refreshSplitCol(cols) {
+    const sig = cols.join("\u0001") + "\u0002" + state.out.splitCol;
+    if (sig === splitSig) return;
+    splitSig = sig;
+    fillColSelect($("#oSplitCol"), cols, state.out.splitCol, null);
+}
+function outBase() {
+    const first = state.sources[0];
+    return slug(state.out.name) || slug(first ? first.name.replace(/\.[^.]{1,6}$/, "") : "") || "table";
+}
+function renderOutPreview(t) {
+    const info = $("#outInfo"), pre = $("#outPrev"), o = state.out;
+    let parts;
+    try { parts = splitParts(t, o); }
+    catch (e) { logLine(info, [["bad", e.message]]); pre.textContent = ""; return; }
+    const base = outBase(), ext = EXT[o.format];
+    const names = parts.slice(0, 4).map(p => base + p.tag + "." + ext + " (" + p.t.rows.length + ")").join(", ");
+    logLine(info, [["a", parts.length + " file" + (parts.length > 1 ? "s" : "") + ": "], [null, names + (parts.length > 4 ? ", ..." : "")]]
+        .concat(parts.length > MAX_PARTS ? [["bad", ", over the " + MAX_PARTS + " file limit"]] : []));
+    const first = parts[0], rows = first.t.rows;
+    let txt = writeTable({ cols: first.t.cols, rows: rows.slice(0, PREVIEW_ROWS) }, Object.assign({}, o, { bom: false }));
+    if (rows.length > PREVIEW_ROWS) txt += "\n[preview shows the first " + PREVIEW_ROWS + " of " + rows.length + " rows of this file]";
+    pre.textContent = txt || "(empty)";
+}
+async function doDownload() {
+    const t = lastResult, o = state.out;
+    if (!t.cols.length) { notify("Nothing to export", true); return; }
+    let parts;
+    try { parts = splitParts(t, o); } catch (e) { notify(e.message, true); return; }
+    if (parts.length > MAX_PARTS) { notify("That would make " + parts.length + " files, the limit is " + MAX_PARTS, true); return; }
+    if (parts.length > 10 && !confirm("Download " + parts.length + " files? The browser may ask to allow multiple downloads.")) return;
+    const base = outBase(), ext = EXT[o.format];
+    for (let i = 0; i < parts.length; i++) {
+        download(base + parts[i].tag + "." + ext, writeTable(parts[i].t, o), MIME[o.format]);
+        if (parts.length > 1) await sleep(350);
+    }
+    notify(parts.length > 1 ? parts.length + " files downloaded" : "Downloaded");
+}
+async function doCopy() {
+    const t = lastResult, o = state.out;
+    if (!t.cols.length) { notify("Nothing to copy", true); return; }
+    let parts;
+    try { parts = splitParts(t, o); } catch (e) { notify(e.message, true); return; }
+    const text = writeTable(parts[0].t, Object.assign({}, o, { bom: false }));
+    let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; }
+    catch (e) {
+        const ta = el("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        try { ok = document.execCommand("copy"); } catch (e2) {}
+        ta.remove();
+    }
+    notify(ok ? (parts.length > 1 ? "First file copied" : "Copied") : "Copy failed, use Download", !ok);
+}
+
+/* ============================================================
+   Configs: files and browser presets
+   ============================================================ */
+function configObj() {
+    return {
+        app: APP.id, kind: "config", schema: APP.schema, version: APP.version, exported: new Date().toISOString(),
+        parse: state.sources.length ? state.sources.map(s => s.parse) : state.defParse,
+        combine: state.combine,
+        steps: state.steps.map(s => { const o = Object.assign({}, s); delete o.id; return o; }),
+        out: state.out
+    };
+}
+function applyConfig(c) {
+    if (!c || typeof c !== "object" || Array.isArray(c) || !(c.kind === "config" || c.steps || c.parse)) {
+        notify("That is not a config file. Data files go in Sources.", true);
+        return false;
+    }
+    if (c.app && c.app !== APP.id && !confirm('That file was saved by "' + String(c.app).slice(0, 60) + '", not ' + APP.id + ". Load it anyway?")) return false;
+    if (c.schema > APP.schema && !confirm("That config is from a newer version. Some settings may be dropped. Continue?")) return false;
+    const parses = Array.isArray(c.parse) ? c.parse.slice(0, 100).map(cleanParse) : [];
+    state.defParse = parses;
+    state.sources.forEach((s, i) => { const p = parses[i] || parses[0]; if (p) s.parse = cleanParse(p); });
+    state.combine = cleanCombine(c.combine);
+    state.steps = Array.isArray(c.steps) ? c.steps.slice(0, 200).map(cleanStep).filter(Boolean) : [];
+    state.out = cleanOut(c.out);
+    cache.clear();
+    detectMsg.clear();
+    renderAll();
+    persistNow();
+    return true;
+}
+function presets() {
+    try {
+        const a = JSON.parse(store.get("presets") || "[]");
+        return Array.isArray(a) ? a.filter(p => p && typeof p.name === "string" && p.cfg && typeof p.cfg === "object") : [];
+    } catch (e) { return []; }
+}
+function renderPresets() {
+    const sel = $("#presetSel"), list = presets();
+    opts(sel, [["", list.length ? "(saved configs)" : "(no saved configs)"]].concat(list.map((p, i) => [String(i), p.name])));
+}
+function savePreset() {
+    const name = $("#presetName").value.trim().slice(0, 80);
+    if (!name) { notify("Give the config a name", true); return; }
+    const list = presets(), i = list.findIndex(p => p.name === name);
+    if (i >= 0 && !confirm('Overwrite "' + name + '"?')) return;
+    const entry = { name, cfg: configObj() };
+    if (i >= 0) list[i] = entry; else list.push(entry);
+    if (!store.set("presets", JSON.stringify(list))) { notify("Could not save, browser storage unavailable. Use Save config file.", true); return; }
+    renderPresets();
+    $("#presetSel").value = String(i >= 0 ? i : list.length - 1);
+    notify("Config saved");
+}
+function loadPreset() {
+    const v = $("#presetSel").value, p = presets()[+v];
+    if (v === "" || !p) { notify("Pick a saved config", true); return; }
+    if (applyConfig(p.cfg)) { $("#presetName").value = p.name; notify('Loaded "' + p.name + '"'); }
+}
+function deletePreset() {
+    const v = $("#presetSel").value, list = presets(), p = list[+v];
+    if (v === "" || !p) { notify("Pick a saved config", true); return; }
+    if (!confirm('Delete "' + p.name + '"?')) return;
+    list.splice(+v, 1);
+    store.set("presets", JSON.stringify(list));
+    renderPresets();
+    notify("Deleted");
+}
+function saveConfigFile() {
+    const nm = slug($("#presetName").value) || "data-wrangler";
+    download(nm + "-config.json", JSON.stringify(configObj(), null, 2), "application/json");
+    notify("Config saved");
+}
+function reset() {
+    if (!confirm("Clear sources, steps and settings? Saved configs are kept.")) return;
+    state = blankState();
+    cache.clear();
+    detectMsg.clear();
+    store.del("state");
+    renderAll();
+    notify("Cleared");
+}
+
+/* ============================================================
+   Wiring
+   ============================================================ */
+function renderAll() {
+    renderSources();
+    renderParse();
+    renderCombine();
+    renderSteps();
+    renderOut();
+    splitSig = null;
+    recompute();
+}
+
+opts($("#pFormat"), FORMATS);
+opts($("#pDelim"), DELIM_OPTS);
+opts($("#pQuote"), QUOTES);
+opts($("#pFixedMode"), [["positions", "cut positions"], ["widths", "field widths"]]);
+opts($("#pKvPair"), KVPAIRS);
+opts($("#cMode"), [["append", "append rows (stack)"], ["join", "join on key columns"]]);
+opts($("#cType"), [["left", "left: all rows of the first source"], ["inner", "inner: matching rows only"], ["full", "full: everything"]]);
+opts($("#oFormat"), OUTFMTS);
+opts($("#oShape"), SHAPES);
+opts($("#oEol"), EOLS);
+opts($("#oSplit"), SPLITS);
+opts($("#stepAdd"), Object.keys(STEPS).map(k => [k, STEPS[k].label]));
+
+/* sources */
+const fileMulti = $("#fileMulti"), drop = $("#drop");
+drop.addEventListener("click", () => fileMulti.click());
+drop.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileMulti.click(); } });
+drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
+drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); importFiles(e.dataTransfer.files); });
+fileMulti.addEventListener("change", () => { importFiles(fileMulti.files).finally(() => { fileMulti.value = ""; }); });
+$("#btnNewPaste").addEventListener("click", () => { pushSource("", ""); renderAll(); persist(); $("#srcText").focus(); });
+$("#srcText").addEventListener("input", e => {
+    const s = act();
+    if (!s) { pushSource("", e.target.value); renderAll(); persist(); return; }
+    if (e.target.readOnly) return;
+    s.text = e.target.value;
+    changedSoon();
+});
+$("#srcName").addEventListener("input", e => { const s = act(); if (s) { s.name = e.target.value.slice(0, 120); $("#parseName").textContent = s.name; persist(); } });
+$("#srcName").addEventListener("change", () => { renderSources(); recompute(); });
+
+/* parse */
+const toInt0 = v => Math.max(0, parseInt(v, 10) || 0);
+const toInt1 = v => Math.max(1, parseInt(v, 10) || 1);
+function pBind(sel, key, conv, live) {
+    $(sel).addEventListener(live ? "input" : "change", e => {
+        const s = act();
+        if (!s) return;
+        s.parse[key] = conv ? conv(e.target.value) : e.target.value;
+        parseVisibility();
+        live ? changedSoon() : changed();
+    });
+}
+pBind("#pFormat", "format");
+pBind("#pQuote", "quote");
+pBind("#pKvPair", "kvPair");
+pBind("#pKvSep", "kvSep", null, true);
+pBind("#pJsonPath", "jsonPath", v => v.trim(), true);
+pBind("#pSkip", "skip", toInt0, true);
+pBind("#pComment", "comment", null, true);
+pBind("#pDetFrom", "detFrom", toInt1, true);
+pBind("#pDetTo", "detTo", toInt1, true);
+pBind("#pDelimCustom", "delim", null, true);
+pBind("#pMaxCols", "maxCols", toInt0, true);
+pBind("#pFixedMode", "fixedMode");
+pBind("#pFixedSpec", "fixedSpec", null, true);
+$("#pDelim").addEventListener("change", e => {
+    const s = act();
+    if (!s) return;
+    s.parse.delim = e.target.value === "custom" ? $("#pDelimCustom").value : e.target.value;
+    parseVisibility();
+    changed();
+});
+[["#tHeader", "header"], ["#tSkipBlank", "skipBlank"], ["#tTrim", "trim"], ["#tFlatten", "flatten"],
+ ["#tAnyChar", "anyChar"], ["#tCollapse", "collapse"]].forEach(([sel, key]) => {
+    toggle($(sel), on => { const s = act(); if (s) { s.parse[key] = on; parseVisibility(); changed(); } });
+});
+$("#btnDetect").addEventListener("click", () => {
+    const s = act();
+    if (!s) return;
+    const d = detect(s.text, s.parse.detFrom, s.parse.detTo);
+    applyDetect(s.parse, d);
+    detectMsg.set(s.id, d);
+    renderParse();
+    changed();
+    notify("Detected " + FMT_NAMES[d.format]);
+});
+
+/* combine */
+$("#cMode").addEventListener("change", e => { state.combine.mode = e.target.value; renderCombine(); changed(); });
+$("#cType").addEventListener("change", e => { state.combine.type = e.target.value; changed(); });
+toggle($("#tAddSource"), on => { state.combine.addSource = on; changed(); });
+
+/* steps */
+$("#btnFoldAll").addEventListener("click", () => {
+    const fold = !state.steps.every(s => s.min);
+    state.steps.forEach(s => { s.min = fold; });
+    renderSteps();
+    recompute();
+    persist();
+});
+$("#btnAddStep").addEventListener("click", () => {
+    state.steps.push(newStep($("#stepAdd").value));
+    renderSteps();
+    changed();
+    const cards = $$("#steps .step");
+    if (cards.length) cards[cards.length - 1].scrollIntoView({ block: "nearest" });
+});
+
+/* output */
+function oBind(sel, key, conv, live) {
+    $(sel).addEventListener(live ? "input" : "change", e => {
+        state.out[key] = conv ? conv(e.target.value) : e.target.value;
+        outVisibility();
+        live ? changedSoon() : changed();
+    });
+}
+oBind("#oFormat", "format");
+oBind("#oShape", "shape");
+oBind("#oEol", "eol");
+oBind("#oSplit", "split");
+oBind("#oSplitCol", "splitCol");
+oBind("#oName", "name", null, true);
+oBind("#oSplitN", "splitN", v => Math.max(0, Number(v) || 0), true);
+[["#tHeaderOut", "header"], ["#tPretty", "pretty"], ["#tTyped", "typed"], ["#tGuard", "guard"], ["#tBom", "bom"]].forEach(([sel, key]) => {
+    toggle($(sel), on => { state.out[key] = on; changed(); });
+});
+$("#btnDownload").addEventListener("click", doDownload);
+$("#btnCopy").addEventListener("click", doCopy);
+
+/* configs */
+$("#btnPresetSave").addEventListener("click", savePreset);
+$("#btnPresetLoad").addEventListener("click", loadPreset);
+$("#btnPresetDel").addEventListener("click", deletePreset);
+$("#btnCfgSave").addEventListener("click", saveConfigFile);
+$("#btnCfgLoad").addEventListener("click", () => $("#cfgFile").click());
+$("#cfgFile").addEventListener("change", e => {
+    const f = e.target.files[0];
+    e.target.value = "";
+    if (!f) return;
+    readText(f).then(text => {
+        let c;
+        try { c = JSON.parse(text); } catch (err) { notify("That file is not valid JSON", true); return; }
+        if (applyConfig(c)) notify("Config loaded");
+    }, () => notify("Could not read that file", true));
+});
+$("#btnReset").addEventListener("click", reset);
+
+document.addEventListener("keydown", e => {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    const k = e.key.toLowerCase();
+    if (k === "s") { e.preventDefault(); saveConfigFile(); }
+    if (k === "o") { e.preventDefault(); $("#cfgFile").click(); }
+});
+
+restore();
+renderPresets();
+tab("input");
+renderAll();
+</script>
+</body>
+</html>
